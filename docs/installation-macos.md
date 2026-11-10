@@ -23,3 +23,7 @@ Application logs rotate at 250 KB with three backups. LaunchAgent stdout/stderr 
 hold bounded CLI status/error summaries; launchd does not rotate them automatically.
 Periodically remove them while services are stopped if needed. No exception payloads,
 HTML, cookies, tokens, titles or guest details are logged by the worker.
+
+Manage only one component with `service install/start/stop/status/uninstall --task serve`
+or `--task sync`. The default `--task all` preserves earlier behavior. Fixed-count
+bootstrap profiles cannot install the hourly worker; see hourly-events.md for migration.

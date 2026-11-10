@@ -26,3 +26,6 @@ wake is requested; missed timed work can run later subject to Task Scheduler and
 worker's interval guard. Do not promise exact execution times. Reinstall if the Python
 path changes. Native registration/runtime still needs validation on Windows; XML structure
 is tested on macOS and CI is configured for Windows.
+
+`service <action> --task serve` and `--task sync` target one scheduled task independently;
+`--task all` is the default. Fixed-count bootstrap profiles are rejected for worker installation.

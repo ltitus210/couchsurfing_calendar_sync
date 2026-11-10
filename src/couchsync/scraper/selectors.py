@@ -15,7 +15,10 @@ def load(path: Path, categories: list[str]) -> dict:
         raise SelectorError(
             "Authenticated selectors not configured. Run scraper inspect; see docs/selectors.md"
         )
-    data = tomllib.loads(path.read_text())
+    return validate(tomllib.loads(path.read_text()), categories)
+
+
+def validate(data: dict, categories: list[str]) -> dict:
     if not data.get("validated_on") or not data.get("auth_marker"):
         raise SelectorError("Selectors must include validated_on and an authenticated-only marker")
     sources = data.get("sources", [])
@@ -30,6 +33,25 @@ def load(path: Path, categories: list[str]) -> dict:
         for key in ("container", "item"):
             if not source.get(key):
                 raise SelectorError(f"Source missing required adapter setting: {key}")
+        if source.get("completion") not in {None, "observed"}:
+            raise SelectorError("Unknown completion policy")
+        if source.get("completion") == "observed":
+            if (
+                not source.get("event_json_ld")
+                or source["kind"] != "event"
+                or "expected_count" in source
+            ):
+                raise SelectorError(
+                    "Observed-event mode requires structured events without fixed counts"
+                )
+            if any(not s.get("event_json_ld") or s.get("kind") != "event" for s in sources):
+                raise SelectorError(
+                    "Observed-event mode cannot be mixed with unverified hosting sources"
+                )
+        if source.get("detail_navigation") not in {None, "same_tab"}:
+            raise SelectorError("Unknown detail navigation mode")
+        if source.get("detail_navigation") and not source.get("event_json_ld"):
+            raise SelectorError("Same-tab navigation requires structured event identity checks")
         if "expected_count" in source:
             count = source["expected_count"]
             if type(count) is not int or count < 1:
@@ -40,7 +62,9 @@ def load(path: Path, categories: list[str]) -> dict:
                 )
             if source.get("max_pages", 1) != 1:
                 raise SelectorError("Inspected counts cannot be mixed with guessed pagination")
-        elif not source.get("end") or not source.get("empty"):
+        elif source.get("completion") != "observed" and (
+            not source.get("end") or not source.get("empty")
+        ):
             raise SelectorError("Source requires explicit end and empty markers")
         if source.get("event_json_ld"):
             if (

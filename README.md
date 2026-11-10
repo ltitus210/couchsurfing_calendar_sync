@@ -86,6 +86,13 @@ Default event privacy is limited (title/status/dates). Full mode may expose name
 addresses and source URLs. Busy/private mode strips identifying metadata; opaque random
 UIDs remain so clients can update entries. Privacy filters apply to every export/preview/feed.
 
+## After the first successful event/calendar test
+
+See [background event updates](docs/hourly-events.md) for a reversible upgrade from fixed
+counts to verified event observations, lower-traffic navigation, separate publisher/worker
+services and the remaining coverage limits. Missing entries stay in the calendar until
+verified inactive or removed by the historical feed-retention policy.
+
 ## Maintenance
 
 `backup PATH` uses SQLite backup under the synchronization lock. Backups contain private

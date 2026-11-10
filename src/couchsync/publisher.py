@@ -111,6 +111,14 @@ def handler(snapshot_dir: Path, feeds: set[str]):
 
 
 def serve(cfg) -> None:
-    ThreadingHTTPServer(
+    server = ThreadingHTTPServer(
         ("127.0.0.1", cfg.port), handler(cfg.data / "snapshots", set(cfg.feeds))
-    ).serve_forever()
+    )
+    print(
+        f"Serving saved calendars at http://127.0.0.1:{cfg.port}/couchsurfing.ics. Keep this terminal open; Ctrl-C stops the server.",
+        flush=True,
+    )
+    try:
+        server.serve_forever()
+    finally:
+        server.server_close()

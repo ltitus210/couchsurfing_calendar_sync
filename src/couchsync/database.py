@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import sqlite3
+from dataclasses import replace
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
@@ -56,9 +58,18 @@ class Database:
         row = self.db.execute("SELECT value FROM meta WHERE key=?", (key,)).fetchone()
         return row[0] if row else None
 
-    def apply(self, records: list[Record], complete: bool, threshold: float = 0.5) -> None:
-        if not complete:
+    def apply(
+        self,
+        records: list[Record],
+        complete: bool,
+        threshold: float = 0.5,
+        *,
+        observations_only: bool = False,
+    ) -> None:
+        if not complete and not observations_only:
             raise ValueError("Incomplete scrape; database and snapshots preserved")
+        if observations_only and any(r.kind != "event" for r in records):
+            raise ValueError("Observation updates are limited to verified event records")
         records = deduplicate(records)
         stamp = now()
         active = self.db.execute("SELECT count(*) FROM records WHERE canceled=0").fetchone()[0]
@@ -76,6 +87,20 @@ class Database:
             previous = self.db.execute(
                 "SELECT * FROM records WHERE key=?", (record.key,)
             ).fetchone()
+            if observations_only and previous and record.status not in INACTIVE:
+                old = Record(**json.loads(previous["payload"]))
+                # Current attendance membership is observed, but absence from an incomplete
+                # organizer list does not prove organizer privileges were removed.
+                if (
+                    old.status not in INACTIVE
+                    and ("organizing" in old.relationships or old.status == "organizing")
+                    and "organizing" not in record.relationships
+                ):
+                    record = replace(
+                        record,
+                        status="organizing",
+                        relationships=sorted(set(record.relationships + ["organizing"])),
+                    )
             digest = record.digest()
             changed = previous is None or previous["hash"] != digest
             seq = previous["sequence"] + int(changed) if previous else 0
@@ -94,7 +119,7 @@ class Database:
                     stamp,
                     modified,
                     int(record.status in INACTIVE),
-                    "complete",
+                    "observed" if observations_only else "complete",
                 ),
             )
             if changed:
@@ -104,6 +129,8 @@ class Database:
                 )
         # Missing records are retained even after complete scans: disappearance is not cancellation.
         self.meta("last_success", stamp)
+        if complete:
+            self.meta("last_complete_success", stamp)
 
     def rows(self) -> list[dict]:
         return [dict(row) for row in self.db.execute("SELECT * FROM records ORDER BY key")]

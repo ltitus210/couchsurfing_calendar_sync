@@ -55,3 +55,24 @@ are atomic per file, not a single transaction across every feed or the remote se
 Local database commits may succeed while publishing fails; calendar publish retries the
 last completed snapshot without another scrape. No production-readiness claim is made
 before the outstanding authenticated/client/platform checks are completed.
+
+## Follow-up: first live calendar and observation-mode preparation
+
+The user reported a successful exact-count live run on November 10: Going 4, Interested 1,
+Organizing 1, 28.58 seconds, 1,446 aggregate browser requests. The user also confirmed the
+local ICS subscription and event display in Apple Calendar. This validates that narrow
+bootstrap flow, not every source state, account, device or client.
+
+The follow-up implementation adds media blocking, same-tab navigation, shared detail
+extraction, changing-count observation updates and a backed-up local profile migration.
+It explicitly reports full-list completeness as false; no reliable total/end marker was
+found in the inspected live list metadata. Actual optimized request counts, native service
+activation, invitations, incoming hosting, Google Calendar and full-list reconciliation
+still require validation. Synthetic browser tests do not substitute for those checks.
+
+Latest local follow-up verification: Python 3.13.5 on Intel macOS, **74 tests passed**,
+Ruff passed, source/wheel packaging passed, and Gitleaks found no leaks. New tests cover
+changing observed counts, preserving missing records and UIDs, explicit cancellation
+guards, profile backup/idempotence, SPA navigation/detail reuse, media-transfer blocking,
+account restriction handling and query-sensitive generic detail identities. Optimized live
+request counts and native service activation are still pending.

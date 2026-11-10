@@ -60,7 +60,12 @@ def run(cfg, session, vault, dry_run=False):
 
                 try:
                     with db.transaction():
-                        db.apply(records, metrics["complete"], cfg.max_cancellations)
+                        db.apply(
+                            records,
+                            metrics["complete"],
+                            cfg.max_cancellations,
+                            observations_only=metrics.get("observations_only", False),
+                        )
                         for feed in cfg.feeds:
                             generate(db.rows(), cfg, feed)
                         raise DryRun()
@@ -68,7 +73,12 @@ def run(cfg, session, vault, dry_run=False):
                     pass
                 return {"result": "dry_run", **metrics}
             with db.transaction():
-                db.apply(records, metrics["complete"], cfg.max_cancellations)
+                db.apply(
+                    records,
+                    metrics["complete"],
+                    cfg.max_cancellations,
+                    observations_only=metrics.get("observations_only", False),
+                )
                 rendered = {f: generate(db.rows(), cfg, f) for f in cfg.feeds}
                 db.meta("metrics", json.dumps(metrics))
             for feed, data in rendered.items():
@@ -83,7 +93,10 @@ def run(cfg, session, vault, dry_run=False):
                 metrics["requests"],
                 time.monotonic() - started,
             )
-            return {"result": "success", **metrics}
+            return {
+                "result": "updated_observations" if metrics.get("observations_only") else "success",
+                **metrics,
+            }
         except Exception as exc:
             # Exception messages may contain URLs or extracted personal data: type only in logs.
             log.error(

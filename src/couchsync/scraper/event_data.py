@@ -83,3 +83,21 @@ def event_record(raw: str, category: str) -> Record:
             "Structured event dates are invalid or lack an explicit offset"
         ) from None
     return record
+
+
+def relationship_record(record: Record, category: str) -> Record:
+    """Reuse verified event details for another observed list membership."""
+    from dataclasses import replace
+
+    if record.status == "canceled":
+        return replace(record, relationships=[])
+    if category not in RELATIONSHIPS:
+        raise SelectorError("Unsupported event relationship")
+    relationship = RELATIONSHIPS[category]
+    lifecycle = record.raw_status.split("; ", 1)[-1]
+    return replace(
+        record,
+        status=relationship,
+        relationships=[relationship],
+        raw_status=f"{relationship}; {lifecycle}",
+    )

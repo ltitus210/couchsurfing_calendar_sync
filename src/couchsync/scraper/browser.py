@@ -4,7 +4,9 @@ import asyncio
 import time
 from contextlib import asynccontextmanager
 
-from playwright.async_api import async_playwright
+from playwright.async_api import async_playwright, expect
+
+from . import traffic
 
 from ..models import deduplicate
 from ..util import https_url
@@ -17,8 +19,13 @@ async def browser(state: dict | None = None, visible: bool = False):
     async with async_playwright() as pw:
         instance = await pw.chromium.launch(headless=not visible, chromium_sandbox=True)
         try:
-            context = await instance.new_context(storage_state=state, accept_downloads=False)
+            options = {"storage_state": state, "accept_downloads": False}
+            if not visible:
+                options["service_workers"] = "block"
+            context = await instance.new_context(**options)
             context.set_default_timeout(15000)
+            if not visible:
+                await traffic.install(context)
             yield context
         finally:
             await instance.close()
@@ -76,16 +83,28 @@ async def collect_page(page, source: dict, auth_marker: str, seen=None) -> list:
         await page.locator(source["incoming_marker"]).wait_for(state="visible")
     # An inspected-count profile is a first-sync guard, not pagination discovery.
     items = page.locator(source["item"])
+    if source.get("completion") == "observed":
+        # Wait for a positive observation or a configured explicit empty marker.
+        # Settling is not considered evidence that pagination has completed.
+        if source.get("empty") and await page.locator(source["empty"]).is_visible():
+            if await items.count():
+                raise SelectorError("Event list shows both records and an empty-state marker")
+            return []
+        await items.first.wait_for(state="visible")
     if "expected_count" in source and await items.count() != source["expected_count"]:
         raise SelectorError(
             "Event count differs from the inspected first-sync profile; re-inspect the list"
         )
     if "expected_count" in source:
         await page.locator(source["container"]).wait_for(state="visible")
-    if await items.count() == 0 and not await page.locator(source["empty"]).is_visible():
+    if await items.count() == 0 and (
+        not source.get("empty") or not await page.locator(source["empty"]).is_visible()
+    ):
         raise SelectorError("Neither records nor explicit empty marker found")
     result = []
     for item in await items.all():
+        if traffic.restricted(page.context):
+            raise SelectorError("Account access restriction encountered; stopping")
         if not source.get("detail_link"):
             result.append(await parse_item(item, source))
             continue
@@ -96,8 +115,26 @@ async def collect_page(page, source: dict, auth_marker: str, seen=None) -> list:
             raise SelectorError("Detail link selector changed")
         url = urljoin(page.url, await link.get_attribute("href") or "")
         https_url(url, couchsurfing=True)
-        if seen is not None and url in seen:
-            result.append(seen[url])
+        from urllib.parse import urlsplit
+
+        cache_key = (
+            urlsplit(url)._replace(query="", fragment="").geturl()
+            if source.get("event_json_ld")
+            else url
+        )
+        if seen is not None and cache_key in seen:
+            record = seen[cache_key]
+            if source.get("event_json_ld"):
+                from .event_data import relationship_record
+
+                record = relationship_record(record, source["category"])
+            result.append(record)
+            continue
+        if source.get("detail_navigation") == "same_tab":
+            record = await detail_in_same_tab(page, link, url, source, auth_marker)
+            result.append(record)
+            if seen is not None:
+                seen[cache_key] = record
             continue
         detail = await page.context.new_page()
         try:
@@ -109,10 +146,72 @@ async def collect_page(page, source: dict, auth_marker: str, seen=None) -> list:
             record = await parse_item(container, source)
             result.append(record)
             if seen is not None:
-                seen[url] = record
+                seen[cache_key] = record
         finally:
             await detail.close()
     return result
+
+
+async def detail_in_same_tab(page, link, url, source, auth_marker):
+    """Use ordinary event links and browser Back to preserve the loaded app shell."""
+    from urllib.parse import urlsplit
+
+    intended_path = urlsplit(url).path
+    if not intended_path.startswith("/c/events/") or intended_path.endswith("my-events"):
+        raise SelectorError("Expected a read-only event detail link")
+    await asyncio.sleep(1)
+    await link.click()
+    await page.wait_for_url(lambda current: urlsplit(current).path == intended_path)
+    https_url(page.url, couchsurfing=True)
+    await page.locator(auth_marker).wait_for(state="visible")
+    container = page.locator(source["detail_container"])
+    await container.wait_for(state="visible")
+    if source.get("event_json_ld"):
+        # Script elements do not expose rendered innerText. Read textContent directly,
+        # waiting for metadata identity rather than relying on a rendered-text assertion.
+        import json
+        from .event_data import event_record
+
+        meta = container.locator(source["event_json_ld"])
+        deadline = time.monotonic() + 15
+        while True:
+            raw = await meta.text_content() or ""
+            try:
+                candidate = json.loads(raw)
+            except ValueError:
+                candidate = None
+            canonical = candidate.get("url") if isinstance(candidate, dict) else None
+            if isinstance(canonical, str) and urlsplit(canonical).path == intended_path:
+                record = event_record(raw, source["category"])
+                break
+            if time.monotonic() >= deadline:
+                raise SelectorError("Event metadata did not match the selected detail page")
+            await asyncio.sleep(0.1)
+    else:
+        record = await parse_item(container, source)
+    if source.get("event_json_ld") and urlsplit(record.url).path != intended_path:
+        raise SelectorError("Event detail identity differs from the selected link")
+    await page.go_back(wait_until="domcontentloaded")
+    https_url(page.url, couchsurfing=True)
+    await page.locator(source["container"]).wait_for(state="visible")
+    return record
+
+
+async def open_source(page, source):
+    from urllib.parse import urlsplit
+
+    current, intended = urlsplit(page.url), urlsplit(source["url"])
+    if source.get("tab_label") and (current.scheme, current.netloc, current.path) == (
+        intended.scheme,
+        intended.netloc,
+        intended.path,
+    ):
+        tab = page.get_by_role("tab", name=source["tab_label"], exact=True)
+        await tab.click()
+        await expect(tab).to_have_attribute("aria-selected", "true", timeout=15000)
+        await page.locator(source["container"]).wait_for(state="visible")
+    else:
+        await navigate(page, source["url"])
 
 
 async def scrape(cfg, session) -> tuple[list, dict]:
@@ -121,6 +220,7 @@ async def scrape(cfg, session) -> tuple[list, dict]:
     requests = 0
     records = []
     counts = {}
+    observed_only = any(s.get("completion") == "observed" for s in adapter["sources"])
     async with browser(session.load()) as context:
 
         def count_request(_):
@@ -140,11 +240,12 @@ async def scrape(cfg, session) -> tuple[list, dict]:
                 blocked.append(True)
 
         context.on("response", account_response)
+        page = await context.new_page()
+        shared_details = {}
         for source in adapter["sources"]:
-            page = await context.new_page()
-            await navigate(page, source["url"])
+            await open_source(page, source)
             source_records = {}
-            detail_seen = {}
+            detail_seen = shared_details if source.get("event_json_ld") else {}
             finished = False
             for _ in range(source.get("max_pages", 50)):
                 await asyncio.sleep(1)
@@ -156,8 +257,14 @@ async def scrape(cfg, session) -> tuple[list, dict]:
                     raise SelectorError("Account access restriction encountered; stopping")
                 for record in batch:
                     source_records[record.key] = record
+                if source.get("completion") == "observed":
+                    if len(source_records) != len(batch):
+                        raise SelectorError("Observed event identities are not unique")
+                    if await page.locator(source["item"]).count() != len(batch):
+                        raise SelectorError("Event list changed while extracting details")
+                    finished = True  # Observation batch verified; source completeness stays false.
+                    break
                 if "expected_count" in source:
-                    # Verify again after detail extraction; a changed list is not complete.
                     if (
                         len(batch) != source["expected_count"]
                         or len(source_records) != source["expected_count"]
@@ -170,7 +277,6 @@ async def scrape(cfg, session) -> tuple[list, dict]:
                 if await page.locator(source["end"]).is_visible():
                     finished = True
                     break
-                # Explicitly configured paging; absence is never accepted as completion.
                 if source.get("next") and await page.locator(source["next"]).is_visible():
                     await page.locator(source["next"]).click()
                 elif source.get("scroll"):
@@ -184,14 +290,20 @@ async def scrape(cfg, session) -> tuple[list, dict]:
                 raise SelectorError("Pagination limit reached; refusing incomplete results")
             counts[source["category"]] = len(source_records)
             records.extend(source_records.values())
-            await page.close()
+        measured = traffic.summary(context)
         await session_save(session, context)
     return deduplicate(records), {
         "requests": requests,
+        **measured,
         "duration_seconds": round(time.monotonic() - started, 2),
         "sources": counts,
-        "complete": True,
-        "coverage": "inspected-count event lists"
-        if any("expected_count" in s for s in adapter["sources"])
-        else "explicit end markers",
+        "complete": not observed_only,
+        "observations_only": observed_only,
+        "coverage": "verified observed events; full-list coverage unverified"
+        if observed_only
+        else (
+            "inspected-count event lists"
+            if any("expected_count" in s for s in adapter["sources"])
+            else "explicit end markers"
+        ),
     }

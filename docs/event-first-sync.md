@@ -46,3 +46,10 @@ browser or reset the timestamp to poll the website. A successful live sync still
 manual Apple/Google client verification. Do not install background services using this
 bootstrap profile until list completion, count-change handling, invitations and required
 hosting behavior have been validated for the intended scope.
+
+## After a successful first sync
+
+Use [hourly-events.md](hourly-events.md) to upgrade the local selector profile. The new mode
+accepts changing positive counts, reports incomplete list coverage explicitly and never
+infers deletion from disappearance. It still needs live validation before unattended use.
+The separate publisher service can replace a manually open `serve` terminal independently.

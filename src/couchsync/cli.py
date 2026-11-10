@@ -48,12 +48,14 @@ def parser():
         cmd.add_argument("path", type=Path)
     for name, options in {
         "auth": ["status", "refresh"],
-        "scraper": ["check", "inspect", "diagnostics"],
+        "scraper": ["check", "inspect", "diagnostics", "upgrade-events"],
         "service": ["install", "start", "stop", "status", "uninstall"],
         "calendar": ["url", "rotate-token", "revoke", "publish", "credentials"],
     }.items():
         group = commands.add_parser(name)
         group.add_argument("action", choices=options)
+        if name == "service":
+            group.add_argument("--task", choices=["all", "sync", "serve"], default="all")
         if name == "calendar":
             group.add_argument(
                 "--feed",
@@ -126,6 +128,7 @@ def status(cfg):
             json.dumps(
                 {
                     "last_success": db.meta("last_success"),
+                    "last_complete_success": db.meta("last_complete_success"),
                     "counts": counts,
                     "undated": undated,
                     "metrics": json.loads(db.meta("metrics") or "{}"),
@@ -254,7 +257,11 @@ def execute(args):
     elif cmd == "doctor":
         doctor(cfg)
     elif cmd == "scraper":
-        if args.action == "diagnostics":
+        if args.action == "upgrade-events":
+            from .profiles import upgrade_events
+
+            print(json.dumps(upgrade_events(cfg), indent=2))
+        elif args.action == "diagnostics":
             doctor(cfg)  # Counts/booleans only, no HTML, source IDs, titles or cookies.
         elif args.action == "inspect":
             _, session = auth_objects(cfg)
@@ -268,7 +275,7 @@ def execute(args):
     elif cmd == "service":
         from .scheduler import manage
 
-        manage(cfg, args.action)
+        manage(cfg, args.action, args.task)
     elif cmd == "calendar":
         calendar_command(cfg, args)
     elif cmd == "logs":

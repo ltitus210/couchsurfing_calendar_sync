@@ -1,0 +1,28 @@
+<!doctype html><html lang="en"><body>
+<button aria-label="Profile">Synthetic profile</button><main id="app"></main>
+<script>
+const memberships={going:["Example1_ho","Example2_ho"],interested:["Example3_ho"],organizing:["Example1_ho"]};
+window.visits={};
+function eventData(id){return {"@context":"https://schema.org","@type":"Event","name":"Synthetic "+id,
+"url":"https://www.couchsurfing.com/c/events/synthetic-"+id,"eventStatus":"https://schema.org/EventScheduled",
+"startDate":"2026-12-01T18:00:00Z","endDate":"2026-12-01T20:00:00Z","location":{"name":"Synthetic venue"}};}
+function render(){
+ const area=document.querySelector('#app');
+ const id=location.pathname.match(/synthetic-([A-Za-z0-9]+_ho)$/)?.[1];
+ if(id){
+   window.visits[id]=(window.visits[id]||0)+1;
+   area.innerHTML='<h1>Synthetic detail</h1>';
+   const meta=document.createElement('script');meta.type='application/ld+json';meta.dataset.testid='hangout-json-ld';meta.textContent=JSON.stringify(eventData(id));area.append(meta);return;
+ }
+ const tab=new URL(location.href).searchParams.get('tab')||'going';
+ const labels={going:'Going',interested:'Interested',organizing:'Organizing'};
+ area.innerHTML='<nav role="tablist">'+Object.entries(labels).map(([key,label])=>`<button role="tab" aria-selected="${key===tab}" data-tab="${key}">${label}</button>`).join('')+'</nav>'+
+ `<section role="tabpanel" aria-label="${labels[tab]}">`+memberships[tab].map(id=>`<article data-couch-crash="false" data-user-created="true"><a href="/c/events/synthetic-${id}?tab=${tab}">Synthetic ${id}</a></article>`).join('')+'</section>';
+}
+document.addEventListener('click',event=>{
+ const tab=event.target.closest('[data-tab]');const link=event.target.closest('a');
+ if(tab){history.pushState({},'', '/c/events/my-events?tab='+tab.dataset.tab);render();}
+ if(link){event.preventDefault();history.pushState({},'',link.getAttribute('href'));render();}
+});
+window.addEventListener('popstate',render);render();
+</script></body></html>

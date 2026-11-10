@@ -76,9 +76,20 @@ def windows_xml(cfg, task: str, user: str | None = None) -> bytes:
     return ET.tostring(root, encoding="utf-16", xml_declaration=True)
 
 
-def manage(cfg, action: str) -> None:
+def manage(cfg, action: str, task: str = "all") -> None:
     cfg.initialize()
-    for task in ("sync", "serve"):
+    if task not in {"all", "sync", "serve"}:
+        raise ValueError("Unknown service task")
+    tasks = ("sync", "serve") if task == "all" else (task,)
+    if action == "install" and "sync" in tasks:
+        from .scraper.selectors import SelectorError, load
+
+        adapter = load(cfg.selectors, cfg.categories)
+        if any("expected_count" in s for s in adapter["sources"]):
+            raise SelectorError(
+                "The fixed-count first-sync profile is not suitable for hourly work; upgrade-events first"
+            )
+    for task in tasks:
         if sys.platform == "darwin":
             path = Path.home() / "Library/LaunchAgents" / f"{LABEL}.{task}.plist"
             domain = f"gui/{os.getuid()}"
@@ -88,6 +99,7 @@ def manage(cfg, action: str) -> None:
                     raise RuntimeError("Service already installed; uninstall before reinstalling")
                 atomic_write(path, plistlib.dumps(launchd(cfg, task)))
                 # Installation is separate from starting the service.
+                print(f"{task}: installed; run service start --task {task} to load it")
                 continue
             args = {
                 "start": ["launchctl", "bootstrap", domain, str(path)],
