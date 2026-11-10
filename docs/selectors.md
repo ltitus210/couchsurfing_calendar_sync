@@ -49,3 +49,10 @@ regressions, not changes to a site whose authenticated DOM we have not accessed.
 
 Do not commit raw authenticated HTML or screenshots. Use fictional replacement fixtures.
 The inspection tool intentionally captures no raw data. No artifacts are uploaded.
+
+## Event first-sync shortcut
+
+For the manually inspected event-only bootstrap profile, see [event-first-sync.md](event-first-sync.md).
+It supports structured `Event` JSON-LD from detail pages and exact positive inspected
+counts without inventing empty/end markers. It is deliberately narrower than the complete
+automatic adapter described above. Changing a count requires renewed inspection.

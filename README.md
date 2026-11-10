@@ -8,7 +8,9 @@ synthetic browser tests are implemented. **Live Couchsurfing extraction is not y
 validated.** No authenticated selectors ship with this release. An account owner must
 inspect the current website and configure the adapter before unattended synchronization
 can work. This is a functional application framework, not a claim of production-ready
-Couchsurfing integration. See [validation](docs/validation.md).
+Couchsurfing integration. See [validation](docs/validation.md). A guarded, manually inspected event-only first-sync
+workflow is described in [event-first-sync](docs/event-first-sync.md); it is not a complete
+automatic website adapter.
 
 The worker includes organized/co-organized, Going, Interested, Invited and incoming
 pending/confirmed stays. It runs at most hourly, then closes Chromium. The separate

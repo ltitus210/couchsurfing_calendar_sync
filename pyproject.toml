@@ -9,7 +9,7 @@ requires-python = ">=3.13"
 license = "MIT"
 dependencies = ["playwright>=1.56", "cryptography>=46", "keyring>=25", "platformdirs>=4", "icalendar>=6", "filelock>=3", "httpx>=0.28"]
 [project.optional-dependencies]
-dev = ["pytest>=8", "ruff>=0.14", "pip-audit>=2", "build>=1"]
+dev = ["pytest>=8", "ruff>=0.14", "pip-audit>=2", "build>=1", "tomli-w>=1.2"]
 [project.scripts]
 couchsync = "couchsync.cli:main"
 [tool.pytest.ini_options]

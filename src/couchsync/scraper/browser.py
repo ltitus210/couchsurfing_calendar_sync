@@ -45,7 +45,9 @@ async def inspect(session) -> None:
         page = await context.new_page()
         await page.goto("https://www.couchsurfing.com/", wait_until="domcontentloaded")
         print(
-            "Inspect account lists and detail pages in Playwright Inspector. No raw captures are saved."
+            "Chrome is paused for inspection. Browse normally; this does not configure the scraper.\n"
+            "When finished, press Resume in Playwright Inspector to save the session and close Chrome.\n"
+            "For first-sync setup see docs/event-first-sync.md. No raw captures are saved."
         )
         await page.pause()
         await session_save(session, context)
@@ -72,7 +74,14 @@ async def collect_page(page, source: dict, auth_marker: str, seen=None) -> list:
     await page.locator(source["container"]).wait_for(state="attached")
     if source.get("incoming_marker"):
         await page.locator(source["incoming_marker"]).wait_for(state="visible")
+    # An inspected-count profile is a first-sync guard, not pagination discovery.
     items = page.locator(source["item"])
+    if "expected_count" in source and await items.count() != source["expected_count"]:
+        raise SelectorError(
+            "Event count differs from the inspected first-sync profile; re-inspect the list"
+        )
+    if "expected_count" in source:
+        await page.locator(source["container"]).wait_for(state="visible")
     if await items.count() == 0 and not await page.locator(source["empty"]).is_visible():
         raise SelectorError("Neither records nor explicit empty marker found")
     result = []
@@ -120,10 +129,17 @@ async def scrape(cfg, session) -> tuple[list, dict]:
 
         context.on("request", count_request)
         blocked = []
-        context.on(
-            "response",
-            lambda response: blocked.append(True) if response.status in {401, 403, 429} else None,
-        )
+
+        def account_response(response):
+            from urllib.parse import urlsplit
+
+            if response.status in {401, 403, 429} and urlsplit(response.url).hostname in {
+                "www.couchsurfing.com",
+                "couchsurfing.com",
+            }:
+                blocked.append(True)
+
+        context.on("response", account_response)
         for source in adapter["sources"]:
             page = await context.new_page()
             await navigate(page, source["url"])
@@ -136,8 +152,21 @@ async def scrape(cfg, session) -> tuple[list, dict]:
                     raise SelectorError("Account access restriction encountered; stopping")
                 https_url(page.url, couchsurfing=True)
                 batch = await collect_page(page, source, adapter["auth_marker"], detail_seen)
+                if blocked:
+                    raise SelectorError("Account access restriction encountered; stopping")
                 for record in batch:
                     source_records[record.key] = record
+                if "expected_count" in source:
+                    # Verify again after detail extraction; a changed list is not complete.
+                    if (
+                        len(batch) != source["expected_count"]
+                        or len(source_records) != source["expected_count"]
+                    ):
+                        raise SelectorError("Inspected event count or source identities changed")
+                    if await page.locator(source["item"]).count() != source["expected_count"]:
+                        raise SelectorError("Event list changed while extracting details")
+                    finished = True
+                    break
                 if await page.locator(source["end"]).is_visible():
                     finished = True
                     break
@@ -162,4 +191,7 @@ async def scrape(cfg, session) -> tuple[list, dict]:
         "duration_seconds": round(time.monotonic() - started, 2),
         "sources": counts,
         "complete": True,
+        "coverage": "inspected-count event lists"
+        if any("expected_count" in s for s in adapter["sources"])
+        else "explicit end markers",
     }

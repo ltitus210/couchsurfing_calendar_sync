@@ -20,6 +20,7 @@ class Config:
     interval: int = 3600
     retention_days: int = 90
     max_cancellations: float = 0.5
+    selector_file: str = "selectors.toml"
     name: str = "Couchsurfing"
     port: int = 8765
     feeds: dict = field(default_factory=lambda: {"all": {}})
@@ -63,6 +64,8 @@ class Config:
         return cfg
 
     def validate(self) -> None:
+        if not isinstance(self.selector_file, str) or not self.selector_file.endswith(".toml"):
+            raise ValueError("selector_file must name a TOML selector profile")
         if not 3600 <= self.interval <= 604800:
             raise ValueError("interval must be 3600..604800 seconds")
         if not 1 <= self.port <= 65535 or self.retention_days < 1:
@@ -91,7 +94,7 @@ class Config:
 
     @property
     def selectors(self) -> Path:
-        return self.config.parent / "selectors.toml"
+        return self.config.parent / self.selector_file
 
     def initialize(self) -> None:
         for path in (self.data, self.logs, self.config.parent):

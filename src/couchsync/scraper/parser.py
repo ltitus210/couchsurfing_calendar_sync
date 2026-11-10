@@ -32,6 +32,13 @@ async def field(item, spec: dict) -> str:
 
 
 async def parse_item(item, source: dict) -> Record:
+    if source.get("event_json_ld"):
+        from .event_data import event_record
+
+        locator = item.locator(source["event_json_ld"])
+        if await locator.count() != 1:
+            raise SelectorError("Event structured data missing or duplicated")
+        return event_record(await locator.text_content() or "", source["category"])
     values = {name: await field(item, spec) for name, spec in source["fields"].items()}
     raw = values.get("raw_status", "")
     if raw not in source["statuses"]:
