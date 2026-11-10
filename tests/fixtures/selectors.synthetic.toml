@@ -1,0 +1,33 @@
+# SYNTHETIC TEST CONTRACT ONLY. These are not Couchsurfing selectors or URLs.
+validated_on = "synthetic fixture, never validated against Couchsurfing"
+auth_marker = "#signed-in"
+[[sources]]
+category = "interested"
+kind = "event"
+url = "https://www.couchsurfing.com/"
+container = "#list"
+item = "article"
+empty = "#empty"
+end = "#end"
+max_pages = 3
+[sources.statuses]
+Interested = "interested"
+Going = "going"
+Invited = "invited"
+Declined = "declined"
+Canceled = "canceled"
+[sources.fields.source_id]
+selector = "a"
+attribute = "data-id"
+[sources.fields.title]
+selector = "a"
+[sources.fields.raw_status]
+selector = ".status"
+[sources.fields.start]
+selector = ".start"
+attribute = "datetime"
+optional = true
+[sources.fields.end]
+selector = ".end"
+attribute = "datetime"
+optional = true

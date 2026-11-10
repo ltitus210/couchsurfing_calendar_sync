@@ -1,0 +1,34 @@
+# Copy to the location printed by `couchsync setup` (platformdirs user config directory).
+# No passwords, feed tokens, cookies, or API keys belong here.
+name = "Couchsurfing"
+interval = 3600
+retention_days = 90
+max_cancellations = 0.5
+port = 8765
+categories = ["organized", "going", "interested", "invited", "hosting"]
+event_privacy = "limited"
+hosting_privacy = "limited"
+[busy]
+organizing = true
+going = true
+interested = false
+invited = false
+pending = false
+confirmed = true
+[prefixes]
+organizing = "[Organizing]"
+going = "[Going]"
+interested = "[Interested]"
+invited = "[Invited]"
+pending = "[Pending]"
+confirmed = "[Confirmed]"
+[feeds.all]
+[feeds.organized]
+[feeds.events]
+[feeds.hosting]
+[feeds.confirmed]
+hosting_privacy = "private"
+# Optional: provision a TLS WebDAV server as described in docs/remote-publishing.md.
+# [remote]
+# base_url = "https://calendar.example.com/private"
+# atomic_move = true
