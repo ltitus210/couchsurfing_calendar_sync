@@ -82,3 +82,8 @@ Application logs rotate at 250 KB with three backups. LaunchAgent stdout/stderr 
 small CLI summaries but are not automatically rotated by launchd. Inspect them locally and
 remove old files while services are stopped if necessary. Worker logs omit third-party
 exception payloads, HTML, cookies, tokens, event titles and guest details.
+
+## Uninstall
+
+Follow [the uninstall commands](uninstall.md) to remove services, subscriptions and the
+package. Saved data is kept unless you choose the optional cleanup.

@@ -10,8 +10,6 @@ Before upgrading: stop services, back up, update dependencies/package, run tests
 then reinstall services if the interpreter moved. Schema v1 initializes transactionally;
 newer unsupported schemas are rejected. No destructive migrations ship in v0.1.
 
-Uninstall: `service stop`, `service uninstall`, `logout`, `calendar revoke` for each remote
-feed, remove subscriptions, then uninstall the package/venv. Feed tokens and publishing
-credentials can be removed from OS credential storage under `couchsync:<installation-id>`.
-Remove application config/data/log directories only after preserving desired backups.
-
+For removal, follow [the uninstall guide](uninstall.md): stop/remove services, revoke any
+remote feeds, remove subscriptions and local login, then uninstall the package. Saved data
+is kept unless you choose optional cleanup.

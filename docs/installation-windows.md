@@ -60,3 +60,8 @@ Existing custom profiles still take precedence; older fixed-count profiles need
 Use `scraper inspect` only for troubleshooting. [Browser instructions](selectors.md):
 navigate in Chrome; finish with **Resume ▶ in Playwright Inspector**, not `SAVE`.
 Inspection does not automatically rewrite settings.
+
+## Uninstall
+
+Follow [the uninstall commands](uninstall.md) to remove services, subscriptions and the
+package. Saved data is kept unless you choose the optional cleanup.

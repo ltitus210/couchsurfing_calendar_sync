@@ -71,7 +71,7 @@ still need live validation. Existing selector overrides take precedence.
 - [Apple Calendar](docs/apple-calendar.md) · [Google Calendar](docs/google-calendar.md)
 - [Remote HTTPS publishing](docs/remote-publishing.md)
 - [Calendar data and privacy](docs/data-policy.md) · [Security](docs/security.md)
-- [Maintenance](docs/maintenance.md) · [Contributing](CONTRIBUTING.md)
+- [Uninstall](docs/uninstall.md) · [Maintenance](docs/maintenance.md) · [Contributing](CONTRIBUTING.md)
 
 The local feed serves saved snapshots; feed requests never scrape Couchsurfing.
 Subscriptions are read-only. Google Calendar and other devices need a reachable HTTPS URL.

@@ -8,6 +8,7 @@ New installs include shared website defaults; browser inspection is optional rep
 - Correct preview? Skip to [Calendar](#4-apple-calendar).
 - Calendar works? Enable [background services](#5-background-services).
 - Both services active and HTTP 200? Check [the hourly run](#6-check-the-hourly-run).
+- Want to remove Couchsync? Follow [uninstall](uninstall.md).
 - Existing custom configuration? Keep [using that profile](#using-an-existing-custom-profile).
 
 ## 1. Install
