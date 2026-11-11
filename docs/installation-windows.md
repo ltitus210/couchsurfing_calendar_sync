@@ -13,7 +13,28 @@ py -3.13 -m venv .venv
 .\.venv\Scripts\couchsync scraper inspect
 ```
 
-Follow docs/selectors.md. After a validated sync run `service install` and `service start`
+## Browser inspection is not automatic configuration
+
+If setup already opened login and saved it, skip the separate login command. For standalone
+login, authenticate in Chrome, then type `SAVE` in Terminal. For `scraper inspect`, use
+Chrome to navigate and leave Inspector paused; finish with **Resume ▶ in Inspector**,
+not `SAVE`. See the shared [Chrome/Inspector walkthrough](setup-macos.md#3-inspect-the-website-in-chrome-and-playwright-inspector)
+for the window roles and page-selection steps; use the Windows executable paths above
+rather than copying its macOS shell commands.
+
+Opening Inspector does not generate an account-specific selector/profile file. Stop for
+[the maintainer handoff](setup-macos.md#4-stop-for-the-configuration-handoff) before attempting
+sync. `events-first.toml` is a supplied profile convention, not automatic setup output.
+No incoming hosting sample means that coverage remains unverified; an outgoing “Your Request”
+page is not an incoming hosting example. Do not create requests just to test this.
+
+After a profile is supplied, choose one live sync/check/dry-run attempt, then preview locally.
+`not_due` means wait for the configured interval. Observation-mode `complete: false` is an
+expected coverage limit, not a failed run. See [first-sync outcomes](event-first-sync.md).
+
+## Task Scheduler
+
+After a validated sync run `service install` and `service start`
 using the same couchsync executable. Task Scheduler registers Couchsync-sync and
 Couchsync-serve as the current user, InteractiveToken, LeastPrivilege. The sync task repeats
 hourly from logon with StartWhenAvailable and IgnoreNew. The publisher starts at logon,

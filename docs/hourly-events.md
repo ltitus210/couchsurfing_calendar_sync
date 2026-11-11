@@ -1,7 +1,12 @@
 # From the first successful calendar to background event updates
 
-Use `/Users/ltitus/git/couchsurfing_calendar_sync/` for source changes and GitHub pushes.
-Use `/Users/ltitus/scripts/couchsurfing/couchsurfing_calendar_sync/` as the installed working
+For the complete user sequence, use [guided setup, stages 7–9](setup-macos.md#7-upgrade-the-event-profile-for-changing-lists).
+This page explains the update policy, traffic counters and separate service controls.
+If both services already report active and the feed returns HTTP 200, do not reinstall;
+[verify the next unattended run](setup-macos.md#9-verify-the-next-unattended-run).
+
+Use `$HOME/git/couchsurfing_calendar_sync/` for source changes and GitHub pushes.
+Use `$HOME/scripts/couchsurfing/couchsurfing_calendar_sync/` as the installed working
 checkout. Do not install from the source repository if you intend to run the other checkout.
 Commit/push and transfer changes through your normal Git workflow; this guide does not
 publish a repository or overwrite either checkout automatically.
@@ -33,12 +38,16 @@ complete Couchsurfing synchronization. Hourly use is limited to these observatio
 After bringing the source changes into the working checkout, activate its existing `.venv`:
 
 ```sh
-cd /Users/ltitus/scripts/couchsurfing/couchsurfing_calendar_sync
+cd "$HOME/scripts/couchsurfing/couchsurfing_calendar_sync"
 source .venv/bin/activate
 python -m pip install --no-deps --no-build-isolation -e .
 couchsync --config "$HOME/Library/Application Support/couchsync/events-first.toml" scraper upgrade-events
 couchsync --config "$HOME/Library/Application Support/couchsync/events-first.toml" sync
 ```
+
+Run one command at a time. Installation should end with `Successfully installed couchsync`.
+The final dot in `-e .` is required; `-e` by itself is incomplete. If `sync` says `not_due`,
+wait until the normal interval has elapsed instead of rerunning it immediately.
 
 The upgrade is local and does not open a browser or access credentials. It backs up the
 exact old selector file with a `.before-observations-<random>.bak` suffix, then atomically
@@ -71,8 +80,11 @@ means the resource policy permitted the request, not proof it reached the networ
 all browser caches. No URLs, cookies or headers are saved in these counters. Enabling
 Playwright routing disables HTTP caching, so the net effect must be measured on the real
 site. See https://playwright.dev/python/docs/api/class-browsercontext#browser-context-route.
-The synthetic tests verify fewer full-page loads and blocked transfers; no live reduction
-from the earlier 1,446-request run is claimed until the updated application is tried.
+A user-reported updated live run verified the same six events with 799 attempts,
+241 allowed and 558 blocked requests in 20.8 seconds, compared with the earlier 1,446
+attempts in 28.58 seconds. These are results from one account/run, not a guaranteed traffic
+budget. The run reported `updated_observations`, `complete: false` and limited coverage.
+Synthetic tests independently verify fewer full-page loads and blocked transfers.
 
 ## Keep the local feed available without a terminal
 
@@ -107,6 +119,8 @@ The worker is one-shot, respects the persisted hourly attempt guard and exits. m
 StartInterval, RunAtLoad and a calendar wake trigger; Windows uses a least-privilege logged-in
 Task Scheduler task. No credentials or browsers are embedded in the scheduler definition.
 Use `service stop --task sync` and `service uninstall --task sync` to stop/remove it while
-leaving the publisher running. This build's native registration/start/wake behavior still
-requires validation under the real user account. Do not claim hosted CI or Windows runtime
-success from locally generated service definitions.
+leaving the publisher running. One user has now verified native macOS install/start/status
+for both jobs and HTTP 200 from the managed publisher. This proves startup and availability,
+not a later scheduled scrape. Confirm `last_success` advances after a full interval while
+the Mac is logged in/awake. Sleep/wake behavior, Windows runtime and hosted CI results
+have not been verified by those local startup checks.

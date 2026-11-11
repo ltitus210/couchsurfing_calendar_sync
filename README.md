@@ -3,56 +3,38 @@
 Private Couchsurfing → Apple Calendar / Google Calendar subscriptions. Python 3.13+,
 macOS 15+ (Intel/Apple Silicon); Windows 10/11 scheduler support.
 
-**Implementation status:** calendar, storage, reconciliation, publishing, scheduling and
-synthetic browser tests are implemented. **Live Couchsurfing extraction is not yet
-validated.** No authenticated selectors ship with this release. An account owner must
-inspect the current website and configure the adapter before unattended synchronization
-can work. This is a functional application framework, not a claim of production-ready
-Couchsurfing integration. See [validation](docs/validation.md). A guarded, manually inspected event-only first-sync
-workflow is described in [event-first-sync](docs/event-first-sync.md); it is not a complete
-automatic website adapter.
+**Start here:** [Guided macOS setup](docs/setup-macos.md). It explains which window to use,
+what to click in Chrome/Playwright Inspector, what each command should show, and when to
+stop for maintainer help. [Already subscribed? Find your next stage](docs/setup-macos.md#find-your-current-stage).
+Windows users should start with [installation-windows.md](docs/installation-windows.md).
 
-The worker includes organized/co-organized, Going, Interested, Invited and incoming
-pending/confirmed stays. It runs at most hourly, then closes Chromium. The separate
-loopback server only reads completed ICS snapshots. Website failures never mean deletion.
+**Current status:** one account's Going, Interested and Organizing events have been synced
+and checked in Apple Calendar. Native macOS services were loaded and the local feed returned
+HTTP 200. A subsequent unattended run still needs confirmation. Invitations, incoming hosting,
+full-list completeness, Windows runtime and Google/remote publication remain unverified.
+See the [validation record](docs/validation.md) for the scope of each result.
 
-## Install
+**Fresh installs still need account-specific scraper configuration.** `setup` writes general
+settings; `login` saves an encrypted session; `scraper inspect` only opens inspection tools.
+None of these automatically creates a working selector profile. The
+[configuration handoff](docs/setup-macos.md#4-stop-for-the-configuration-handoff) is a required
+checkpoint before the first sync. No universal authenticated selector profile ships here.
 
-From this project directory on macOS:
+## Setup checkpoints
 
-```sh
-python3.13 -m venv .venv
-source .venv/bin/activate
-python -m pip install --require-hashes -r requirements.lock
-python -m pip install setuptools wheel
-python -m pip install --no-deps --no-build-isolation .
-python -m playwright install chromium
-couchsync setup
-couchsync login
-couchsync scraper inspect
-```
+| Stage | Success check | Next step |
+|---|---|---|
+| Install in your working checkout | `couchsync --help` works; use the complete `-e .` command | [Login](docs/setup-macos.md#2-set-up-and-log-in) |
+| Login in the isolated Chrome window | Type `SAVE` in Terminal after authenticating; command finishes | [Browser inspection](docs/setup-macos.md#3-inspect-the-website-in-chrome-and-playwright-inspector) |
+| Inspect in Chrome with Inspector paused | Maintainer has inspected the needed pages; Resume finishes inspection | [Profile handoff](docs/setup-macos.md#4-stop-for-the-configuration-handoff) |
+| Receive a verified account profile | Its configuration and selector file exist | [One live sync and preview](docs/setup-macos.md#5-run-one-sync-and-preview-the-calendar) |
+| Check saved events | Expected titles/dates; UTC preview understood | [Serve and subscribe](docs/setup-macos.md#6-serve-the-feed-and-subscribe-in-apple-calendar) |
+| Check Apple Calendar | Subscription displays correct local times | [Upgrade fixed counts](docs/setup-macos.md#7-upgrade-the-event-profile-for-changing-lists) |
+| Enable background operation | Both jobs loaded; local URL returns HTTP 200 | [Verify an unattended run](docs/setup-macos.md#9-verify-the-next-unattended-run) |
 
-Install a current setuptools first if your Python environment lacks a build backend:
-`python -m pip install setuptools wheel`. For Windows use
-[these instructions](docs/installation-windows.md).
-
-Complete the [authenticated selector inspection](docs/selectors.md), then:
-
-```sh
-couchsync scraper check
-# A live check counts as a scrape attempt; wait the configured interval before another.
-couchsync sync --dry-run
-couchsync sync
-couchsync preview
-couchsync service install
-couchsync service start
-couchsync calendar url
-```
-
-Do not install/start background services before the first validated sync. CLI `--config`
-is a global option, placed before the command. Non-secret configuration lives in the
-platformdirs user configuration directory; data and logs have separate directories.
-`couchsync doctor` reports safe readiness booleans. `status` reports counts and last success.
+Do not run `scraper check`, `sync --dry-run` and `sync` in a batch: each is a live website
+attempt and shares the hourly guard. `preview`, `serve`, status and logs read local data.
+Use the same global `--config` argument before the command throughout a setup.
 
 ## Calendars and publishing
 
@@ -124,5 +106,5 @@ pip-audit -r requirements.lock
 ```
 
 Synthetic fixtures are intentionally fictional; passing them proves adapter mechanics,
-not live selectors. CI runs Python 3.13/3.14 on macOS and Windows, secret scanning and
-vulnerability auditing. See [dependency updates](docs/dependencies.md).
+not live selectors. CI is configured for Python 3.13/3.14 on macOS and Windows, secret scanning and
+vulnerability auditing; hosted execution is not implied by local checks. See [dependency updates](docs/dependencies.md).

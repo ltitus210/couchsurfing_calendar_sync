@@ -1,78 +1,92 @@
-# Validation report — November 10, 2026
+# Validation record — November 10, 2026
 
-## Executed locally
+This record distinguishes automated checks, live inspection and user-reported results.
+A working local calendar does not prove every source category, platform or client works.
 
-- Python 3.13.5 on Intel macOS: **38 tests passed** (no skips).
-- Python 3.14.5: full suite also executed; see delivered implementation report for final count.
-- Real Playwright Chromium: synthetic DOM parsing, explicit empty detection, unknown-status
-  failure, intercepted website navigation and HTTP 429 stop behavior. No Couchsurfing
-  credentials were used and intercepted tests never contact Couchsurfing.
-- Local loopback HTTP: feed allowlist, content, HEAD, ETag/304 caching, traversal rejection.
-- SQLite: idempotence, UID/sequence transitions, rollback, missing-record retention,
-  suspicious mass-cancellation prevention, backup and CLI restore.
-- Calendar round-trip through icalendar: organized, Going, Interested, Invited,
-  pending/confirmed stays, cancellations, Unicode/folding, offsets/DST validation,
-  exclusive checkout and same-day stays, missing dates, separate feeds and privacy.
-- Fernet encrypted session round-trip, tampering rejection, logout and rejection of
-  unsupported credential backends. Native Keychain/Credential Manager CRUD not exercised.
-- WebDAV mocked transport: MKCOL/PUT/MOVE, failure keeps previous remote file, token URL
-  revocation and revoked-token publication blocking. No real hosting was provisioned.
-- Scheduler definitions: macOS plist round-trip, interval/wake trigger/independent server;
-  Windows XML least-privilege user, repetition, catch-up and concurrency settings.
-- Ruff lint passed. Wheel and source-distribution build passed.
-- Runtime dependencies hash-locked universally for Python 3.13+; Windows backend dependency
-  included. pip-audit found **no known vulnerabilities** in the locked dependencies.
-- Official checksum-verified Gitleaks 8.30.1 directory scan: **no leaks found**.
+## Current checkpoints
 
-## Requires authenticated/manual validation
+| Checkpoint | Evidence | What it does not establish |
+|---|---|---|
+| Account-specific Going/Interested/Organizing extraction | User reported the guarded live sync and an updated observation-mode sync | Other accounts, all RSVP transitions, invitations, full paging/completeness |
+| Local Apple Calendar | User confirmed subscription and displayed events/local times | iCloud, iPhone/iPad, remote HTTPS or Google Calendar |
+| macOS background service startup | User reported install/start/status for both jobs and managed-feed HTTP 200 | A later unattended scrape, session expiry handling or sleep/wake execution |
+| Automated code checks | Latest follow-up: 74 tests passed on Python 3.13.5 / Intel macOS; Ruff/build/secret scan passed | Native Windows runtime, hosted CI or authenticated site correctness beyond live samples |
 
-**The live Couchsurfing adapter is not complete until an account owner inspects and
-configures current selectors.** No working production DOM selectors are claimed or shipped.
-Scraper inspect provides a visible browser/Inspector; check performs a locked, rate-limited
-dry run. Website access restrictions, social login, MFA, full pagination, incoming-only
-scope, organizers, all RSVP states, accepted-but-unconfirmed stays and final confirmed
-stays must be validated with real account data. See selectors.md. Automation never accepts
-requests, sends messages or bypasses access controls.
+## User-reported live sequence
 
-Apple Calendar macOS/iCloud/iPhone and Google Calendar subscription behavior require manual
-client testing. ICS library round-trip and standards-oriented field checks are not a claim
-of an independent RFC certification or a successful client integration test.
+1. The inspected account's Going, Interested and Organizing lists were examined. Event
+   detail pages exposed structured Event JSON-LD. No reliable total/end marker was found
+   in the inspected list metadata. An Invited tab was not present in that tab group.
+2. A supplied guarded profile produced Going 4, Interested 1 and Organizing 1 in 28.58
+   seconds with 1,446 aggregate attempted browser requests. Its exact inspected counts
+   were a bootstrap safeguard, not universal proof of full-list completeness.
+3. Preview displayed six entries in UTC. The user confirmed the local Apple Calendar
+   subscription and event display after starting the publisher. The earlier connection
+   failure was diagnosed as no server listening on port 8765 while the saved snapshot existed.
+4. After profile upgrade, the user reported `updated_observations`, `complete: false`,
+   `observations_only: true`, the same category counts, 799 attempts, 241 allowed and 558
+   blocked requests in 20.8 seconds. These are one account/run's results, not a guaranteed budget.
+5. The user reported `sync: active` / `serve: active` after native macOS install/start/status.
+   A HEAD request returned HTTP 200, text/calendar and a 2,456-byte saved feed. This confirms
+   loaded definitions and publisher availability. It is not yet evidence of the next hourly run.
 
-Native launchd registration/start/stop and sleep/wake execution were not performed.
-Windows registration and runtime were not executed locally. Native credential storage
-unattended access must be checked under the actual logged-in account. Actual remote HTTPS
-WebDAV authorization, atomic MOVE, URL revocation and Google/Apple retrieval are pending.
-CI is configured for macOS/Windows and Python 3.13/3.14; it has not run on a hosted repository.
+The pending-stay sample opened during setup was an outgoing “Your Request” accommodation
+request, excluded from incoming-hosting scope. No incoming pending or confirmed stay sample
+was available. Those categories remain unverified; no request was created or changed for testing.
 
-## Deliberate conservative limitations
+## Automated checks actually performed
 
-Missing records never cause cancellation, even after a complete list. Explicit inactive
-states are required. This avoids interpreting list filtering or website changes as decline.
-Conflicting duplicate details abort the batch. User-provided completeness selectors require
-maintainer judgment. Source/history records remain locally until data is removed; feed
-retention limits published history, not database retention. Multi-feed file replacements
-are atomic per file, not a single transaction across every feed or the remote server.
-Local database commits may succeed while publishing fails; calendar publish retries the
-last completed snapshot without another scrape. No production-readiness claim is made
-before the outstanding authenticated/client/platform checks are completed.
+Initial checks passed on Python 3.13.5 and 3.14.5 with 38 tests; the structured-event follow-up
+passed 60 tests on Python 3.13.5. The latest observation/traffic/service follow-up passed
+**74 tests on Python 3.13.5 / Intel macOS**. The expanded 74-test suite has not been claimed
+as executed on every supported OS/Python combination.
 
-## Follow-up: first live calendar and observation-mode preparation
+Coverage includes:
 
-The user reported a successful exact-count live run on November 10: Going 4, Interested 1,
-Organizing 1, 28.58 seconds, 1,446 aggregate browser requests. The user also confirmed the
-local ICS subscription and event display in Apple Calendar. This validates that narrow
-bootstrap flow, not every source state, account, device or client.
+- Real Chromium against synthetic/intercepted pages: parser, empty/unknown-state failure,
+  navigation, HTTP 429 stop behavior, same-tab navigation, metadata identity waiting,
+  changing observed counts, duplicate detail reuse and blocked media transfers.
+- Loopback feed HTTP: allowlisted paths, HEAD, ETag/304 caching and traversal rejection.
+- SQLite: UID/sequence/idempotence, rollback, missing-record retention, observation updates,
+  organizer-membership preservation, mass-cancellation safeguards and backup/CLI restore.
+- ICS round-trip through icalendar: statuses, hosting date policies, Unicode/folding,
+  UTC/IANA/DST validation, exclusive checkout, missing dates, feeds and privacy filtering.
+- Session encryption/tampering/logout and rejection of unsupported credential backends.
+  Live successful syncs demonstrate usable native session/key storage under the logged-in
+  macOS account; controlled native-store fault/logout tests and Windows store access are separate.
+- Mock-transport WebDAV publication/MOVE/failure/revocation. No live remote host was provisioned.
+- Scheduler definitions and an isolated publisher-only install test. Real macOS startup
+  evidence is the user report above, not the mocked definition test.
+- Reversible/idempotent profile migration and query-sensitive generic detail identities.
 
-The follow-up implementation adds media blocking, same-tab navigation, shared detail
-extraction, changing-count observation updates and a backed-up local profile migration.
-It explicitly reports full-list completeness as false; no reliable total/end marker was
-found in the inspected live list metadata. Actual optimized request counts, native service
-activation, invitations, incoming hosting, Google Calendar and full-list reconciliation
-still require validation. Synthetic browser tests do not substitute for those checks.
+Ruff, source-distribution/wheel packaging and checksum-verified Gitleaks scans passed.
+The locked runtime dependency audit found no known vulnerabilities when checked during
+implementation. Synthetic fixtures are fictional; no private authenticated captures were
+committed. Tests that use intercepted pages do not contact the live Couchsurfing account.
 
-Latest local follow-up verification: Python 3.13.5 on Intel macOS, **74 tests passed**,
-Ruff passed, source/wheel packaging passed, and Gitleaks found no leaks. New tests cover
-changing observed counts, preserving missing records and UIDs, explicit cancellation
-guards, profile backup/idempotence, SPA navigation/detail reuse, media-transfer blocking,
-account restriction handling and query-sensitive generic detail identities. Optimized live
-request counts and native service activation are still pending.
+## Outstanding validation
+
+- At least one subsequent unattended hourly observation run, followed by saved status/log
+  confirmation. Loaded launchd jobs or HTTP 200 alone do not prove that run succeeded.
+- macOS sleep/wake timing and unattended native credential-store behavior when locked/expired.
+- Invitations, incoming-only hosting scope, pending/intermediate/mutually confirmed stay
+  statuses, cancellations, missing dates and all intended real account state transitions.
+- Complete event-list pagination/infinite scrolling and reliable evidence for missing-RSVP
+  reconciliation. Observation mode explicitly leaves full-list completeness unverified.
+- Windows task registration/execution and native credential storage; other macOS architectures
+  beyond the tested machine; reviewed hosted CI results.
+- Actual remote HTTPS WebDAV authorization/atomic publication/revocation and Google Calendar,
+  iCloud/iPhone/iPad subscriptions. Local Apple success does not establish these.
+
+## Limits that remain by design
+
+Missing records do not cause cancellation; explicit inactive states are required. Observation
+mode can update verified events without claiming every source record was retrieved. Empty
+tabs need a verified explicit empty marker; failed selectors cannot mean “empty account.”
+Source/history records remain locally until data is removed; retention limits feed history.
+
+Snapshots are replaced atomically per file, not in one transaction across all feeds and
+remote servers. Database commits may succeed while publishing fails; `calendar publish`
+retries a completed snapshot without scraping. ICS library round-trip/field checks are
+not independent RFC certification. No general production-readiness claim is made from the
+limited live account/client evidence above.

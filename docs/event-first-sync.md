@@ -1,55 +1,78 @@
-# Guarded event-only first sync
+# First event sync: the maintainer handoff and the user's next commands
 
-The original setup stopped at a developer Inspector without configuring a website
-adapter. Opening that window was not enough to make synchronization work.
+For a first installation, follow [the guided macOS setup](setup-macos.md). In particular,
+[Chrome/Inspector actions](setup-macos.md#3-inspect-the-website-in-chrome-and-playwright-inspector)
+and [the configuration handoff](setup-macos.md#4-stop-for-the-configuration-handoff) must be
+completed before the commands below. Opening Inspector does not configure synchronization.
 
-The November 10 inspection found the Going, Interested and Organizing lists and
-`script[data-testid="hangout-json-ld"]` on an event detail page. The structured Event
-contains canonical URL, title, explicit UTC start/end timestamps, lifecycle status,
-location and description. The new parser selects only these fields and never evaluates
-JavaScript. Source identity uses the immutable `_ho` identifier, not the title slug.
+## Before running anything here
 
-A separate local `events-first.toml` profile can point to
-`events-first.selectors.toml` with the inspected categories and exact positive list
-counts. This preserves the user's main configuration and encrypted session location.
-`selector_file` is relative to the configuration directory unless an absolute path is used.
-No account-specific selector profile or list counts are committed to the public repository.
+A maintainer must have supplied `events-first.toml` and its referenced selector file in
+the private application directory. These are account-specific files outside Git. The setup
+wizard does not create them, and `upgrade-events` cannot create a missing initial profile.
+The maintainer must identify the exact path, scope and privacy settings.
 
-This is a narrow bootstrap profile, **not a generally validated automatic scraper**.
-An inspected count is an operator assertion about a known list, not proof of pagination
-completeness for an arbitrary account. Do not invent or increase counts to make a run pass.
-The run requires the selected tab panel, precise count, unique source IDs and all detail
-pages to validate. Any mismatch stops the entire batch before calendar snapshots are
-replaced. Missing/empty lists are not accepted by this profile. The explicit-empty/end
-adapter remains available for fully validated sources. Missing records never cause deletion.
+The inspected scope is Going, Interested and Organizing. Invitations were not visible in
+the inspected tab group, and no incoming-hosting sample was available. Those features remain
+unverified. Outgoing “Your Request” stays are excluded. Do not create fake requests for tests.
 
-Invitations were not found in the inspected tab group; incoming hosting had no example.
-Those categories remain unverified and are omitted only in this separate first-sync
-profile, not removed from the main configuration or from application support.
+If Inspector is still paused after the maintainer finishes, click **Resume ▶** there.
+That saves the session, closes its Chrome window and returns to the Terminal prompt.
+Do not type login's `SAVE` response into an inspection session.
 
-## Operator handoff
+## Install the current code in the working checkout
 
-After an operator has created the private profile for the account:
+Bring source changes into this checkout using your normal Git workflow first. In the
+existing working checkout and its environment:
 
-1. Press **Resume** in Playwright Inspector. The inspection command saves the current
-   session and closes its Chromium window. No account changes are made.
-2. In the existing Python environment, reinstall the project with `python -m pip install
-   --no-deps --no-build-isolation -e .` so the command uses the updated code.
-3. Run `couchsync --config "<actual path to events-first.toml>" sync` once. This is a local
-   snapshot run; the bootstrap profile must omit remote publishing configuration.
-4. Run `couchsync --config "<actual path to events-first.toml>" preview` to inspect the
-   privacy-filtered event titles/dates without another website request.
+```sh
+cd "$HOME/scripts/couchsurfing/couchsurfing_calendar_sync"
+source .venv/bin/activate
+python -m pip install --no-deps --no-build-isolation -e .
+```
 
-Report the safe success summary or failure component. Do not share cookies or storage
-state. Failed attempts count toward the hourly guard. Do not immediately retry with a new
-browser or reset the timestamp to poll the website. A successful live sync still needs
-manual Apple/Google client verification. Do not install background services using this
-bootstrap profile until list completion, count-change handling, invitations and required
-hosting behavior have been validated for the intended scope.
+Copy the full install command, including the dot after `-e`. The source checkout used for
+Codex/GitHub edits is separate from this installed checkout; installing the old working
+copy does not pick up changes sitting only in the source copy.
 
-## After a successful first sync
+## Run one live sync
 
-Use [hourly-events.md](hourly-events.md) to upgrade the local selector profile. The new mode
-accepts changing positive counts, reports incomplete list coverage explicitly and never
-infers deletion from disappearance. It still needs live validation before unattended use.
-The separate publisher service can replace a manually open `serve` terminal independently.
+```sh
+couchsync --config "$HOME/Library/Application Support/couchsync/events-first.toml" sync
+```
+
+**Expected for the original bootstrap profile:** `result: success`, plausible category
+counts, `complete: true` and `coverage: inspected-count event lists`. A positive count
+is an operator assertion about a known list, not general proof of pagination completeness.
+Changed counts stop that profile; do not raise them blindly or install an hourly worker yet.
+
+**Expected for an already-upgraded profile:** `result: updated_observations`,
+`observations_only: true`, `complete: false`. This is a successful update of verified
+observations, with missing entries preserved. It does not claim complete source coverage.
+
+**If `not_due`:** wait until the configured interval, normally an hour after the most recent
+attempt, has elapsed. Failed attempts/checks/dry-runs count too. Do not run check, dry-run
+and sync one after another or reset the guard. If a maintainer asks for a dry-run first,
+that is a separate live attempt and does not create the ICS snapshot.
+
+**If an error appears:** stop and use [troubleshooting](troubleshooting.md). Authentication,
+page structure, malformed dates or mismatched details must not be interpreted as missing events.
+
+## Preview locally, then check Calendar
+
+```sh
+couchsync --config "$HOME/Library/Application Support/couchsync/events-first.toml" preview
+```
+
+Preview does not visit Couchsurfing. Verify event counts, prefixes and dates. It prints
+starts in UTC: `2026-11-13T00:00:00+00:00` is November 12 at 7 PM in America/New_York.
+Check local start/end times and multi-day spans in Calendar too.
+
+**Next:** [serve and subscribe](setup-macos.md#6-serve-the-feed-and-subscribe-in-apple-calendar).
+A successful sync saves a file but does not start the HTTP server. `serve` must stay running
+in one terminal while a second terminal checks HTTP 200 and Calendar subscribes.
+
+**After the subscription displays correctly:** [upgrade and test once](setup-macos.md#7-upgrade-the-event-profile-for-changing-lists),
+then [start background services](setup-macos.md#8-start-background-services). The upgrade
+backs up the old selector file, supports changing positive list sizes, and explicitly leaves
+full-list completeness unverified. Read [the limits](hourly-events.md) before unattended use.

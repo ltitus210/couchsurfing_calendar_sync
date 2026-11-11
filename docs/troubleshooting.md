@@ -1,31 +1,117 @@
-# Troubleshooting
+# Troubleshooting: find the failed checkpoint
 
-Run `doctor`, `status`, and `scraper diagnostics`. These are safe readiness summaries,
-not proof of a valid online login. `auth status` proves only local decryptability.
-`auth refresh` opens a new interactive login; unattended workers never request a password.
+If you are unsure what to do next, use the [setup stage finder](setup-macos.md#find-your-current-stage).
+Do not restart the whole installation for a later-stage error. Use the same config file
+for sync, preview, serving and services; the examples below use the supplied event-first profile.
 
-- No selectors configured: use scraper inspect and docs/selectors.md. Synthetic selectors
-  intentionally do not represent Couchsurfing. There is no automatic guessed fallback.
-- Missing/changed field, unknown status, missing empty/end marker: stop and inspect. Every
-  relevant source must be complete before changes are applied. Never weaken checks merely
-  to obtain a green result. Unknown statuses are failures, not cancellations.
-- Hosting request has no arrival/checkout: retained in diagnostics counts, omitted from ICS.
-- Ambiguous or nonexistent DST time: extract a source UTC offset. Machine-local time is not used.
-- Expired login, access restriction, MFA, CAPTCHA, HTTP 401/403/429: stop; reauthenticate
-  interactively or follow the website's restrictions. Do not bypass protection.
-- Transient HTTP 5xx navigation: at most two retries with 2s and 4s backoff. Other network
-  failures abort and preserve data. The persistent attempt guard prevents rapid retries.
-- `not_due`: an attempt (including failed runs/check/dry-run) happened within the configured
-  interval. Wait before trying again. Do not delete the guard to poll the website.
-- Lock timeout: another worker/backup/restore is running. Lock files may remain after exit;
-  filelock releases the OS lock on crash. Do not run multiple installations for one account.
-- WebDAV failure: local snapshots remain available. A later `calendar publish` retries the
-  completed file without scraping. Atomic MOVE is required by default. Verify server rights.
-- Client lag/duplicates: check server ETag, publication and client subscription refresh;
-  remove duplicate imports/old subscriptions. Google/Apple refresh timing is independent.
-- Keychain unavailable: run while logged in and unlock your native store. Insecure keyring
-  backends are rejected. Never work around this by writing keys or passwords to disk.
+## Installation and the two checkouts
 
-For public issues include version, OS/Python version, aggregate diagnostics and the failure
-component. No page HTML, screenshots, source URLs, guest names, databases, cookies or feed
-URLs. For additional debugging use Inspector locally; no raw captures are uploaded.
+| Symptom | Meaning / next action |
+|---|---|
+| `-e option requires 1 argument` | Use the whole command `python -m pip install --no-deps --no-build-isolation -e .`; the dot names the current working checkout |
+| Reinstall succeeds but a new command is missing | Bring source changes into the installed working checkout first; editable installs do not bridge two different directories |
+| `couchsync` not found or wrong code appears to run | Activate the working checkout's `.venv`; check `python -c 'import sys; print(sys.executable)'` |
+| Both `(.venv)` and `(base)` appear | That alone is not an error; verify the interpreter path rather than the prompt decoration |
+
+Use `$HOME/git/couchsurfing_calendar_sync` for code edits/GitHub and
+`$HOME/scripts/couchsurfing/couchsurfing_calendar_sync` for the installed environment in
+the tested two-checkout workflow. Private application files stay outside both repositories.
+
+## Chrome, Inspector and login
+
+| Symptom | Meaning / next action |
+|---|---|
+| Chrome and Playwright Inspector opened and nothing happens | Normal: inspection is paused. Navigate in Chrome; follow [the browser walkthrough](setup-macos.md#3-inspect-the-website-in-chrome-and-playwright-inspector) |
+| Unsure where to type `SAVE` | Only at the Terminal prompt for `couchsync login`, after website authentication |
+| Need to finish `scraper inspect` | Click **Resume ▶ in Inspector**; it saves the session, closes Chrome and returns Terminal's prompt |
+| Resume closes Chrome unexpectedly | Expected behavior: it finishes inspection, not just the current website action |
+| Clicking an element picks it rather than navigating | Turn off Pick Locator to use the website normally |
+| Logged into everyday Chrome but inspection asks for login | The Playwright browser uses an isolated session; complete the normal login flow there |
+| No incoming hosting example exists | Mark incoming hosting unverified and continue only with the agreed event scope; do not manufacture a request |
+| Pending Stay says Your Request / View Your Trip | That is an outgoing accommodation request, excluded from incoming-hosting scope |
+
+If live support cannot read the open window, the maintainer may need normal screen/accessibility
+permission for the support tool. Completing that permission does not configure Couchsync or
+change the scraper's selectors. Keep the requested Chrome page open while support retries.
+
+## Missing configuration and live-run results
+
+| Symptom | Meaning / next action |
+|---|---|
+| No selectors configured / selector file missing | Opening Inspector did not create a profile. Stop at the [maintainer handoff](setup-macos.md#4-stop-for-the-configuration-handoff) |
+| `events-first.toml` does not exist | That file is an account-specific setup convention, not automatic wizard output. Ask for the exact supplied profile; do not invent settings |
+| `upgrade-events` cannot find/upgrade a profile | It migrates an existing compatible event profile; it does not discover or create the first adapter |
+| `not_due` | A sync/check/dry-run, including a failed one, happened within the configured interval. Wait normally one hour from that attempt; do not reset timestamps |
+| `updated_observations`, `complete: false` | Expected successful observation update with unverified full-list coverage; missing records remain preserved |
+| Event count differs from inspected profile | Fixed-count bootstrap safety check. Re-inspect if unexpected; after a validated first run, use the documented profile upgrade rather than guessing counts |
+| Empty tab without a verified empty marker | Stop and ask for adapter inspection. A missing selector cannot be accepted as an empty account |
+| Unknown status, wrong detail identity, missing fields, incomplete pagination | Required validation failed. Preserve the good feed and inspect the failed component; do not weaken checks just to pass |
+| High request total | Includes browser assets. Review attempted/allowed/blocked counts and types; do not repeatedly scrape to measure |
+
+Choose one live validation command: `scraper check`, `sync --dry-run`, or `sync`. They
+are not consecutive required setup steps. Checks and dry-runs do not write snapshots;
+`sync` does on success. Local preview, status, logs and serving can be used without another
+Couchsurfing visit.
+
+## Preview, calendar dates and HTTP availability
+
+- `+00:00` in preview is UTC. For example, November 13, 2026 at 00:00 UTC is November 12
+  at 7 PM in America/New_York. Verify local start/end times and multi-day spans in Calendar.
+- HTTP `Date`/`Last-Modified` are GMT/UTC, so a next-day header date can be correct locally.
+- A valid snapshot and a successful preview do not mean the HTTP publisher is running.
+
+For “The request for http://127.0.0.1:8765/couchsurfing.ics failed,” first run:
+
+```sh
+curl --noproxy '*' -I http://127.0.0.1:8765/couchsurfing.ics
+```
+
+| Result | What to check |
+|---|---|
+| Connection refused | Start `serve` with the same profile in another terminal and leave it running, or check/start the managed publisher |
+| HTTP 200 + text/calendar | Feed is available; retry the subscription using the plain URL and On My Mac location |
+| HTTP 503, no completed snapshot | Ensure a successful `sync` produced the configured data snapshot; a dry-run alone is not enough |
+| HTTP 404 | Use `/couchsurfing.ics` for the enabled combined feed; check configured feed selection and URL |
+| Port/address already in use | A manual server or managed publisher may already own port 8765. Use the existing valid publisher instead of starting another |
+
+If a manual server is used, it normally holds the terminal without returning a prompt;
+older versions print nothing. If it exits, read the error. Confirming Calendar's local HTTP
+permission prompt does not start or repair the server. See [Apple Calendar](apple-calendar.md).
+Do not disable TLS/certificate checks as a general troubleshooting step.
+
+## Background services and freshness
+
+`service install` writes definitions; `service start` loads them; `service status` queries
+them. Do not repeatedly install/start already-loaded jobs. If both say active, check HTTP
+200 for the publisher and saved `status`/`logs` after an hour for the worker.
+
+“Active” means loaded in launchd, not that the one-shot worker is constantly scraping or
+that a scheduled sync succeeded. Keep a manual server open only until its managed publisher
+replaces it. Stop manual `serve` with Ctrl-C before starting the managed publisher; after
+both jobs are loaded and HTTP 200 works, terminals can be closed.
+
+Use `--task serve` to manage only the publisher or `--task sync` for only the worker.
+The default is both. If the interpreter/config path moved, stop/uninstall the affected
+job, reinstall it from the intended working environment and start it again. This is not
+necessary for every code update. For ordinary code updates, stop jobs before reinstalling
+and start them afterward so the persistent publisher uses the updated code too.
+
+## Other failures and safe reports
+
+- Expired login, MFA/CAPTCHA, HTTP 401/403/429: stop and reauthenticate normally or follow
+  website restrictions. Do not bypass protection. Previous data/snapshots are retained.
+- Native Keychain/Credential Manager unavailable: run as the logged-in user with the store
+  available. Insecure fallback keyrings are refused; do not move secrets into TOML.
+- HTTP 5xx navigation gets at most two bounded retries. Other network failures abort.
+- Lock timeout: another worker/backup/restore may be running. Lock files can remain after
+  exit while the OS lock has been released. Do not run competing installs for one account.
+- Missing hosting dates remain in diagnostics; do not invent arrival/checkout dates.
+- Ambiguous/nonexistent DST times require an explicit source offset, not machine-local guessing.
+- Remote WebDAV failure: `calendar publish` can retry a completed snapshot without scraping.
+- Client refresh delays are separate from worker timing. Check publisher availability and
+  last successful sync before replacing subscriptions. Remove duplicate imports/old URLs.
+
+`doctor`, `status` and `scraper diagnostics` summarize readiness; `auth status` proves only
+local session decryptability, not online authentication. Review output before posting.
+Public reports should contain version/OS/Python, sanitized counts and the failure component,
+not cookies, tokens, names, private URLs/messages, raw HTML, screenshots, databases or feeds.
