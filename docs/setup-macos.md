@@ -1,13 +1,14 @@
 # macOS quick start
 
-Run commands from the project folder. Use the same Terminal unless a step says otherwise.
-Stop if a command fails. [Troubleshooting](troubleshooting.md).
+Run commands from the project folder. Stop if one fails. [Troubleshooting](troubleshooting.md).
+New installs include shared website defaults; browser inspection is optional repair work.
 
 ## Already installed?
 
-- Correct preview? Skip to [Calendar](#6-subscribe-in-apple-calendar).
-- Calendar works? Continue with [profile upgrade](#7-upgrade-fixed-counts-if-needed).
-- Both services active and HTTP 200? Skip to [the hourly check](#9-check-the-next-hourly-run).
+- Correct preview? Skip to [Calendar](#4-apple-calendar).
+- Calendar works? Enable [background services](#5-background-services).
+- Both services active and HTTP 200? Check [the hourly run](#6-check-the-hourly-run).
+- Existing custom configuration? Keep [using that profile](#using-an-existing-custom-profile).
 
 ## 1. Install
 
@@ -21,153 +22,125 @@ python -m playwright install chromium
 ```
 
 **Look for:** `Successfully installed couchsync`. Keep the final dot in `-e .`.
-For later updates, activate the existing `.venv` instead of recreating it.
+For updates, activate the existing `.venv` instead of recreating it.
 
-## 2. Log in
+## 2. Set up and log in
 
 ```sh
 couchsync setup
+couchsync login
 ```
 
-- **Chrome opens:** log into Couchsurfing, including any MFA.
+- Accept the setup defaults, or choose categories/privacy settings.
+- Skip `login` if you already logged in during setup.
+- **Chrome:** log into Couchsurfing, including any MFA.
 - **Terminal:** type `SAVE` at the login prompt and press Return. Chrome closes.
-- If you skipped login during setup, run `couchsync login` to open it.
 
-**Look for:** the Terminal prompt returning without an error. This saves an encrypted session.
+**Look for:** the Terminal prompt returning without an error. Your session is encrypted.
+No Playwright Inspector, manual page tour or account-specific selector file is needed.
 
-## 3. Inspect in Chrome
+## 3. Sync and preview
+
+```sh
+couchsync sync
+couchsync preview
+```
+
+| Result | What to do |
+|---|---|
+| `updated_observations`, `complete: false` | Saved observed records; full-list coverage is unverified. Check preview. |
+| `source_notes` | Read the notes: an unavailable Invited view or unrecognized hosting layout can be skipped. |
+| `not_due` | Wait until an hour after the last attempt. |
+| Error | Stop and [troubleshoot](troubleshooting.md). |
+
+**Look for:** expected titles and dates. Preview uses UTC; Calendar shows local times.
+Missing records are retained. Hosting requires positive incoming-request evidence;
+“Your Request” / “View Your Trip” is outgoing and excluded. Incoming hosting and empty-state
+wording are shared-layout assumptions awaiting live validation. [Coverage](validation.md).
+
+Sync/check/dry-run share the hourly guard, including failures. They are alternatives,
+not three required setup commands. Preview is local and can be repeated.
+
+## 4. Apple Calendar
+
+Leave this running in **Terminal A**:
+
+```sh
+couchsync serve
+```
+
+In **Terminal B**:
+
+```sh
+curl --noproxy '*' -I http://127.0.0.1:8765/couchsurfing.ics
+```
+
+**Look for:** `200 OK` and `Content-Type: text/calendar`.
+Connection refused? Check that Terminal A is still running.
+
+**In Apple Calendar:**
+
+1. File → New Calendar Subscription.
+2. Enter `http://127.0.0.1:8765/couchsurfing.ics` → Subscribe.
+3. Choose **On My Mac**, a name and Auto-refresh.
+4. Check local start/end times and multi-day spans.
+
+Allowing local HTTP does not start the server. Google Calendar and other devices need
+[remote HTTPS publishing](remote-publishing.md). [Calendar help](apple-calendar.md).
+
+## 5. Background services
+
+Press **Ctrl-C** in Terminal A to stop the manual server, then run:
+
+```sh
+couchsync service install
+couchsync service start
+couchsync service status
+curl --noproxy '*' -I http://127.0.0.1:8765/couchsurfing.ics
+```
+
+**Look for:** `sync: active`, `serve: active`, and HTTP `200 OK`.
+You can close the terminals. Keep the same Calendar subscription.
+Already active? Skip install/start. Install is needed once, after a successful live sync.
+
+## 6. Check the hourly run
+
+Leave the Mac logged in and awake for a full interval, then run:
+
+```sh
+source .venv/bin/activate
+couchsync status
+couchsync logs
+```
+
+**Look for:** a newer `last_success` and no later failure. Active services alone do not
+prove a scheduled sync succeeded. Sleep/wake timing is best effort.
+
+## Using an existing custom profile
+
+Keep the same configuration argument on every command, for example:
+
+```sh
+couchsync --config "$HOME/Library/Application Support/couchsync/events-first.toml" sync
+```
+
+Existing selector files are preserved and take precedence over bundled defaults.
+Only older fixed-count profiles need [the optional migration](event-first-sync.md)
+before installing an hourly worker. New installations do not need it.
+
+## If the website changes
+
+Update Couchsync first. If the layout still fails, use [optional inspection](selectors.md):
 
 ```sh
 couchsync scraper inspect
 ```
 
-Two windows open. Terminal waiting is normal.
+- **Chrome:** open the failing event tab/details or incoming stay request.
+- **Playwright Inspector:** leave paused while checking the page. If asked for a locator,
+  use **Pick Locator → click the element → copy the locator**. Turn the picker off to navigate.
+- **Finish:** click **Resume ▶ in Inspector**. It saves the session and closes Chrome.
+- **Terminal:** waiting is normal; do not type login's `SAVE` during inspection.
 
-| Window | What to do |
-|---|---|
-| **Chrome** | Open **Events → View Your Events → Going**, then an event's details. Repeat for Interested and Organizing. |
-| **Playwright Inspector** | Leave paused while the maintainer inspects. Click **Resume ▶** only when finished. |
-| **Terminal** | Wait for the command to finish; do not type `SAVE` during inspection. |
-
-- If asked for a locator: **Pick Locator → click the requested element in Chrome → copy the Inspector field**.
-  Turn the picker off to navigate normally. [More detail](selectors.md).
-- For hosting, show an existing request **from someone asking to stay with you**.
-  “Your Request” / “View Your Trip” indicates an outgoing request, which is excluded.
-- No incoming example or Invited tab? Tell the maintainer; do not create test requests.
-- When finished, click **Resume ▶ in Inspector**. It saves the session and closes Chrome.
-
-**Look for:** Terminal's prompt returning. Inspection alone does not configure the scraper.
-
-## 4. Get the account profile
-
-**Stop until a maintainer supplies and checks these private files:**
-
-- `$HOME/Library/Application Support/couchsync/events-first.toml`
-- The selector file referenced by that configuration.
-
-These filenames describe the event-first setup used here. `setup` does not create them;
-`upgrade-events` cannot create a missing initial profile. Use the actual path supplied
-for your account. [Maintainer instructions](selectors.md#maintainer-profile-creation-is-a-manual-prerequisite).
-
-The currently tested scope is Going, Interested and Organizing. Hosting, invitations
-and full-list completeness remain unverified.
-
-## 5. Sync and preview
-
-```sh
-couchsync --config "$HOME/Library/Application Support/couchsync/events-first.toml" sync
-```
-
-| Result | Next action |
-|---|---|
-| `success` | Guarded first sync passed. Preview below. |
-| `updated_observations`, `complete: false` | Successful verified-event update with incomplete list coverage. Preview below. |
-| `not_due` | Wait until an hour after the last attempt; do not keep retrying. |
-| Error | Stop and [troubleshoot](troubleshooting.md). |
-
-Checks, dry-runs and syncs share the hourly guard, including failures. Choose **one** live
-command at a time; do not run `scraper check`, `sync --dry-run` and `sync` as a sequence.
-
-```sh
-couchsync --config "$HOME/Library/Application Support/couchsync/events-first.toml" preview
-```
-
-**Look for:** expected titles and dates. Preview is local and uses UTC: November 13,
-2026 at `00:00+00:00` is November 12 at 7 PM in New York. Check local end times in Calendar.
-
-## 6. Subscribe in Apple Calendar
-
-**Terminal A — leave this running:**
-
-```sh
-couchsync --config "$HOME/Library/Application Support/couchsync/events-first.toml" serve
-```
-
-It holds the Terminal open; older versions may print nothing. If the managed publisher
-is already active, skip this manual server.
-
-**Terminal B — check the feed:**
-
-```sh
-curl --noproxy '*' -I http://127.0.0.1:8765/couchsurfing.ics
-```
-
-**Look for:** `200 OK` and `Content-Type: text/calendar`. Connection refused means the
-server is unavailable; check Terminal A before retrying Calendar.
-
-**In Apple Calendar:**
-
-1. **File → New Calendar Subscription**.
-2. Enter `http://127.0.0.1:8765/couchsurfing.ics` and click Subscribe.
-3. Choose **On My Mac**, a name, and Auto-refresh.
-4. Confirm local start/end times and multi-day spans.
-
-Keep Terminal A open for now. A local HTTP permission prompt does not start the server.
-[Calendar troubleshooting and other devices](apple-calendar.md).
-
-## 7. Upgrade fixed counts if needed
-
-After the first Calendar check, open Terminal B in the project folder and run:
-
-```sh
-source .venv/bin/activate
-couchsync --config "$HOME/Library/Application Support/couchsync/events-first.toml" scraper upgrade-events
-couchsync --config "$HOME/Library/Application Support/couchsync/events-first.toml" sync
-```
-
-**Look for:** `upgraded` (or `already_upgraded`), then `updated_observations` once the hourly
-guard permits. `complete: false` is expected: verified records update; missing entries stay.
-Already tested this upgraded mode? Skip this step. [Coverage limits](hourly-events.md).
-
-## 8. Start background services
-
-Already active? Skip install/start and verify the feed.
-
-First press **Ctrl-C** in Terminal A to stop the manual `serve` command. Then run:
-
-```sh
-couchsync --config "$HOME/Library/Application Support/couchsync/events-first.toml" service install
-couchsync --config "$HOME/Library/Application Support/couchsync/events-first.toml" service start
-couchsync --config "$HOME/Library/Application Support/couchsync/events-first.toml" service status
-curl --noproxy '*' -I http://127.0.0.1:8765/couchsurfing.ics
-```
-
-**Look for:** `sync: active`, `serve: active`, and HTTP `200 OK`. You can now close the
-terminals and keep the existing Calendar subscription. Do not add a duplicate.
-Install is needed once; start loads the jobs. Active means loaded, not proof of an hourly sync.
-
-## 9. Check the next hourly run
-
-Leave the Mac logged in and awake for a full interval. Then open Terminal in the project:
-
-```sh
-source .venv/bin/activate
-couchsync --config "$HOME/Library/Application Support/couchsync/events-first.toml" status
-couchsync --config "$HOME/Library/Application Support/couchsync/events-first.toml" logs
-```
-
-**Look for:** a newer `last_success`, plausible event counts, and no later failure.
-These commands do not scrape. The publisher keeps the feed available; the worker exits
-between hourly attempts. Sleep/wake timing is best effort.
-
-[Service reference](installation-macos.md) · [Troubleshooting](troubleshooting.md)
+Inspection does not automatically rewrite the adapter. A maintainer can update the shared
+defaults or help create an override. Do not change RSVPs or requests to obtain examples.

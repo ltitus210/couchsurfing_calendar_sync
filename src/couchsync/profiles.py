@@ -37,6 +37,13 @@ def flat_profile(data: dict) -> bytes:
 
 def upgrade_events(cfg) -> dict:
     with FileLock(str(cfg.data / "sync.lock"), timeout=0):
+        if not cfg.selectors.exists():
+            adapter = load(cfg.selectors, cfg.categories)
+            return {
+                "result": "already_current",
+                "layout": adapter.get("layout_version", "custom"),
+                "note": "Built-in defaults need no bootstrap upgrade",
+            }
         original = cfg.selectors.read_bytes()
         adapter = load(cfg.selectors, cfg.categories)
         updated = deepcopy(adapter)
@@ -75,4 +82,25 @@ def upgrade_events(cfg) -> dict:
             "backup": str(backup),
             "coverage": "observed events only; missing entries retained",
             "note": "A successful live sync is still required before enabling the hourly worker",
+        }
+
+
+def export_defaults(cfg) -> dict:
+    """Create a private editable override only on an explicit troubleshooting command."""
+    import os
+    from .scraper.defaults import profile
+
+    with FileLock(str(cfg.data / "sync.lock"), timeout=0):
+        if cfg.selectors.exists():
+            raise SelectorError("Selector override already exists; it was preserved")
+        adapter = validate(profile(cfg.categories), cfg.categories)
+        encoded = flat_profile(adapter)
+        cfg.selectors.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        descriptor = os.open(cfg.selectors, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(descriptor, "wb") as output:
+            output.write(encoded)
+        return {
+            "result": "exported",
+            "path": str(cfg.selectors),
+            "note": "This override now takes precedence over package defaults; inspect only to troubleshoot layout changes",
         }

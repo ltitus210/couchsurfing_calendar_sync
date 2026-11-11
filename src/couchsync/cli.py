@@ -48,7 +48,7 @@ def parser():
         cmd.add_argument("path", type=Path)
     for name, options in {
         "auth": ["status", "refresh"],
-        "scraper": ["check", "inspect", "diagnostics", "upgrade-events"],
+        "scraper": ["check", "inspect", "diagnostics", "upgrade-events", "export-defaults"],
         "service": ["install", "start", "stop", "status", "uninstall"],
         "calendar": ["url", "rotate-token", "revoke", "publish", "credentials"],
     }.items():
@@ -65,11 +65,31 @@ def parser():
     return p
 
 
+def setup_next(cfg):
+    import shlex
+
+    adapter = load(cfg.selectors, cfg.categories)
+    if cfg.selectors.exists():
+        print("Using your existing website-layout override.")
+    else:
+        print(
+            f"Using built-in Couchsurfing layout {adapter['layout_version']}; no initial inspection needed."
+        )
+    prefix = shlex.join(["couchsync", "--config", str(cfg.config)])
+    if not (cfg.data / "session.enc").exists():
+        print(f"Log in first: {prefix} login (Chrome: log in; Terminal: type SAVE)")
+    print(f"Next: {prefix} sync")
+    print(f"Then: {prefix} preview")
+    print(f"For the local Calendar feed: {prefix} serve")
+    print(
+        "Use scraper inspect only if website changes or an unsupported layout needs troubleshooting."
+    )
+
+
 def setup(cfg):
     if cfg.config.exists():
-        print(
-            "Existing configuration preserved. Edit it using examples/config.example.toml as reference."
-        )
+        print("Existing configuration preserved.")
+        setup_next(cfg)
         return
     print(
         "Python 3.13+ and Chromium are required. Install Chromium: python -m playwright install chromium"
@@ -80,9 +100,7 @@ def setup(cfg):
     )
     hosting_privacy = input("Hosting privacy full/limited/private [limited]: ").strip() or "limited"
     interval = int(input("Sync interval in seconds, minimum 3600 [3600]: ") or "3600")
-    categories = input(
-        "Categories, comma separated [organized,going,interested,invited,hosting]: "
-    ).strip()
+    categories = input("Categories, comma separated [" + ",".join(cfg.categories) + "]: ").strip()
     enabled = categories.split(",") if categories else cfg.categories
     remote = input("Optional HTTPS WebDAV base URL (blank for local): ").strip()
     raw = (
@@ -106,12 +124,8 @@ def setup(cfg):
     if input("Open interactive Couchsurfing login now? [y/N]: ").lower() == "y":
         _, session = auth_objects(cfg)
         asyncio.run(browser.login(session))
-    print("Next: scraper inspect, configure selectors, scraper check, sync --dry-run, sync.")
-    print("Background services: service install then service start, after a successful sync.")
-    print("Local Apple subscription: http://127.0.0.1:8765/couchsurfing.ics")
-    print(
-        "Google Calendar requires an externally reachable HTTPS feed. See docs/google-calendar.md."
-    )
+    setup_next(cfg)
+    print("Google Calendar needs an externally reachable HTTPS feed; see docs/google-calendar.md.")
 
 
 def status(cfg):
@@ -149,8 +163,10 @@ def doctor(cfg):
     except Exception:
         checks["session_decryptable"] = False
     try:
-        load(cfg.selectors, cfg.categories)
+        adapter = load(cfg.selectors, cfg.categories)
         checks["selectors_configured"] = True
+        checks["layout_source"] = "custom override" if cfg.selectors.exists() else "built-in"
+        checks["layout_version"] = adapter.get("layout_version", "custom")
     except Exception:
         checks["selectors_configured"] = False
     from playwright.sync_api import sync_playwright
@@ -257,7 +273,11 @@ def execute(args):
     elif cmd == "doctor":
         doctor(cfg)
     elif cmd == "scraper":
-        if args.action == "upgrade-events":
+        if args.action == "export-defaults":
+            from .profiles import export_defaults
+
+            print(json.dumps(export_defaults(cfg), indent=2))
+        elif args.action == "upgrade-events":
             from .profiles import upgrade_events
 
             print(json.dumps(upgrade_events(cfg), indent=2))

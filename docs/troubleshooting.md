@@ -2,7 +2,7 @@
 
 If you are unsure what to do next, use the [setup stage finder](setup-macos.md#already-installed).
 Do not restart the whole installation for a later-stage error. Use the same config file
-for sync, preview, serving and services; the examples below use the supplied event-first profile.
+for sync, preview, serving and services; new installations use the built-in profile.
 
 ## Installation
 
@@ -17,13 +17,13 @@ for sync, preview, serving and services; the examples below use the supplied eve
 
 | Symptom | Meaning / next action |
 |---|---|
-| Chrome and Playwright Inspector opened and nothing happens | Normal: inspection is paused. Navigate in Chrome; follow [the browser walkthrough](setup-macos.md#3-inspect-in-chrome) |
+| Chrome and Playwright Inspector opened and nothing happens | Normal: inspection is paused. Navigate in Chrome; follow [the browser walkthrough](setup-macos.md#if-the-website-changes) |
 | Unsure where to type `SAVE` | Only at the Terminal prompt for `couchsync login`, after website authentication |
 | Need to finish `scraper inspect` | Click **Resume ▶ in Inspector**; it saves the session, closes Chrome and returns Terminal's prompt |
 | Resume closes Chrome unexpectedly | Expected behavior: it finishes inspection, not just the current website action |
 | Clicking an element picks it rather than navigating | Turn off Pick Locator to use the website normally |
 | Logged into everyday Chrome but inspection asks for login | The Playwright browser uses an isolated session; complete the normal login flow there |
-| No incoming hosting example exists | Mark incoming hosting unverified and continue only with the agreed event scope; do not manufacture a request |
+| No incoming hosting example exists | No initial inspection is required; the guarded shared layout can be used, with live hosting validation still outstanding. Do not manufacture a request |
 | Pending Stay says Your Request / View Your Trip | That is an outgoing accommodation request, excluded from incoming-hosting scope |
 
 If live support cannot read the open window, the maintainer may need normal screen/accessibility
@@ -34,9 +34,9 @@ change the scraper's selectors. Keep the requested Chrome page open while suppor
 
 | Symptom | Meaning / next action |
 |---|---|
-| No selectors configured / selector file missing | Opening Inspector did not create a profile. Stop at the [maintainer handoff](setup-macos.md#4-get-the-account-profile) |
-| `events-first.toml` does not exist | That file is an account-specific setup convention, not automatic wizard output. Ask for the exact supplied profile; do not invent settings |
-| `upgrade-events` cannot find/upgrade a profile | It migrates an existing compatible event profile; it does not discover or create the first adapter |
+| No selectors configured / selector file missing | An absent default `selectors.toml` uses built-in defaults. A missing custom file must be restored, or remove the custom `selector_file` setting to use defaults |
+| `events-first.toml` does not exist | That is a legacy custom profile, not wizard output. New installs can use `couchsync sync` without it |
+| `upgrade-events` cannot find/upgrade a profile | Only older custom event profiles need migration. New defaults are already current |
 | `not_due` | A sync/check/dry-run, including a failed one, happened within the configured interval. Wait normally one hour from that attempt; do not reset timestamps |
 | `updated_observations`, `complete: false` | Expected successful observation update with unverified full-list coverage; missing records remain preserved |
 | Event count differs from inspected profile | Fixed-count bootstrap safety check. Re-inspect if unexpected; after a validated first run, use the documented profile upgrade rather than guessing counts |

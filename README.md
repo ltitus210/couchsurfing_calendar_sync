@@ -15,42 +15,45 @@ python -m pip install setuptools wheel
 python -m pip install --no-deps --no-build-isolation -e .
 python -m playwright install chromium
 couchsync setup
+couchsync login
 ```
 
-1. **If setup opens Chrome:** log into Couchsurfing, then type **SAVE** in Terminal.
-2. **If you skipped login:** run `couchsync login` and do the same.
-3. Run:
+**In Chrome:** log into Couchsurfing. **In Terminal:** type `SAVE` and press Return.
+Skip the separate login command if you already logged in during setup.
+Built-in website defaults are included; no initial inspection or custom profile is required.
 
-   ```sh
-   couchsync scraper inspect
-   ```
+```sh
+couchsync sync
+couchsync preview
+couchsync serve
+```
 
-4. **In Chrome:** open **Events → View Your Events → Going**, then an event's details.
-   Show Interested and Organizing too. Leave Inspector paused while a maintainer checks the pages.
-5. **When inspection is finished:** click **Resume ▶ in Playwright Inspector**. Chrome closes.
+**Look for:** `updated_observations`, expected titles/dates in preview, then a running server.
+`complete: false` means full-list coverage is unverified; missing entries are retained.
+`not_due` means wait until an hour after the last attempt.
 
-**Stop here until a maintainer supplies your account's configuration and selector files.**
-Opening Inspector does not create them automatically. Do not copy the synthetic test selectors.
-
-Then follow the [short command-by-command guide](docs/setup-macos.md#4-get-the-account-profile)
-for syncing, subscribing and starting background services.
+**In Apple Calendar:** File → New Calendar Subscription →
+`http://127.0.0.1:8765/couchsurfing.ics` → **On My Mac**.
+Keep the server Terminal open until you [enable background services](docs/setup-macos.md#5-background-services).
 
 ## Already installed?
 
-- [First sync and preview](docs/setup-macos.md#5-sync-and-preview)
-- [Serve the feed and subscribe in Calendar](docs/setup-macos.md#6-subscribe-in-apple-calendar)
-- [Enable background services](docs/setup-macos.md#8-start-background-services)
+- [Sync and preview](docs/setup-macos.md#3-sync-and-preview)
+- [Check the feed and subscribe](docs/setup-macos.md#4-apple-calendar)
+- [Enable background services](docs/setup-macos.md#5-background-services)
 - [Troubleshoot an error](docs/troubleshooting.md)
 
-**Tested scope:** Going, Interested and Organizing on one account, local Apple Calendar,
-and macOS service startup. Full-list coverage, invitations, incoming hosting, Windows
-runtime and Google/remote publishing remain unverified. [Validation details](docs/validation.md).
+**Coverage:** Going, Interested and Organizing use the observed shared layout. Invited is
+included when that tab exists. Incoming pending/confirmed hosting uses a guarded assumed
+layout; outgoing stays are excluded. Unavailable optional views produce `source_notes`.
+Hosting, invitations and English empty-state wording still need live validation.
+Existing selector overrides take precedence. [Validation details](docs/validation.md).
 
 ## Reference
 
 - [Windows installation](docs/installation-windows.md)
-- [Chrome/Inspector and maintainer configuration](docs/selectors.md)
-- [Event update limits and traffic counters](docs/hourly-events.md)
+- [Optional inspection and layout repairs](docs/selectors.md)
+- [Hourly update limits and traffic counters](docs/hourly-events.md)
 - [Apple Calendar](docs/apple-calendar.md) · [Google Calendar](docs/google-calendar.md)
 - [Remote HTTPS publishing](docs/remote-publishing.md)
 - [Calendar data and privacy](docs/data-policy.md) · [Security](docs/security.md)

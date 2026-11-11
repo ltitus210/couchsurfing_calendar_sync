@@ -12,8 +12,12 @@ class SelectorError(RuntimeError):
 
 def load(path: Path, categories: list[str]) -> dict:
     if not path.exists():
+        if path.name == "selectors.toml":
+            from .defaults import profile
+
+            return validate(profile(categories), categories)
         raise SelectorError(
-            "Authenticated selectors not configured. Run scraper inspect; see docs/selectors.md"
+            "Custom selector file missing; restore it or use the built-in selectors.toml default"
         )
     return validate(tomllib.loads(path.read_text()), categories)
 
@@ -30,6 +34,16 @@ def validate(data: dict, categories: list[str]) -> dict:
         https_url(source["url"], couchsurfing=True)
         if source.get("kind") != ("hosting" if source["category"] == "hosting" else "event"):
             raise SelectorError("Source kind/category mismatch")
+        if source.get("adapter"):
+            if (
+                source["adapter"] != "messages_stays"
+                or source["category"] != "hosting"
+                or source.get("completion") != "observed"
+                or type(source.get("max_items", 20)) is not int
+                or not 1 <= source.get("max_items", 20) <= 100
+            ):
+                raise SelectorError("Invalid built-in hosting adapter settings")
+            continue
         for key in ("container", "item"):
             if not source.get(key):
                 raise SelectorError(f"Source missing required adapter setting: {key}")
@@ -44,9 +58,13 @@ def validate(data: dict, categories: list[str]) -> dict:
                 raise SelectorError(
                     "Observed-event mode requires structured events without fixed counts"
                 )
-            if any(not s.get("event_json_ld") or s.get("kind") != "event" for s in sources):
+            if any(
+                not (s.get("event_json_ld") and s.get("kind") == "event")
+                and s.get("adapter") != "messages_stays"
+                for s in sources
+            ):
                 raise SelectorError(
-                    "Observed-event mode cannot be mixed with unverified hosting sources"
+                    "Observed mode requires structured events or the guarded incoming-stay adapter"
                 )
         if source.get("detail_navigation") not in {None, "same_tab"}:
             raise SelectorError("Unknown detail navigation mode")

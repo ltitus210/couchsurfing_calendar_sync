@@ -86,11 +86,22 @@ async def collect_page(page, source: dict, auth_marker: str, seen=None) -> list:
     if source.get("completion") == "observed":
         # Wait for a positive observation or a configured explicit empty marker.
         # Settling is not considered evidence that pagination has completed.
-        if source.get("empty") and await page.locator(source["empty"]).is_visible():
-            if await items.count():
-                raise SelectorError("Event list shows both records and an empty-state marker")
-            return []
-        await items.first.wait_for(state="visible")
+        deadline = time.monotonic() + 15
+        while True:
+            count = await items.count()
+            empty = page.locator(source["empty"]).first if source.get("empty") else None
+            empty_found = bool(empty is not None and await empty.is_visible())
+            if empty_found:
+                if count:
+                    raise SelectorError("Event list shows both records and an empty-state marker")
+                return []
+            if count:
+                break
+            if time.monotonic() >= deadline:
+                raise SelectorError(
+                    "Event list did not show records or a recognized empty state; run scraper inspect if the layout changed"
+                )
+            await asyncio.sleep(0.2)
     if "expected_count" in source and await items.count() != source["expected_count"]:
         raise SelectorError(
             "Event count differs from the inspected first-sync profile; re-inspect the list"
@@ -98,7 +109,7 @@ async def collect_page(page, source: dict, auth_marker: str, seen=None) -> list:
     if "expected_count" in source:
         await page.locator(source["container"]).wait_for(state="visible")
     if await items.count() == 0 and (
-        not source.get("empty") or not await page.locator(source["empty"]).is_visible()
+        not source.get("empty") or not await page.locator(source["empty"]).first.is_visible()
     ):
         raise SelectorError("Neither records nor explicit empty marker found")
     result = []
@@ -197,21 +208,28 @@ async def detail_in_same_tab(page, link, url, source, auth_marker):
     return record
 
 
-async def open_source(page, source):
+async def open_source(page, source, auth_marker):
     from urllib.parse import urlsplit
 
     current, intended = urlsplit(page.url), urlsplit(source["url"])
-    if source.get("tab_label") and (current.scheme, current.netloc, current.path) == (
+    same_list = (current.scheme, current.netloc, current.path) == (
         intended.scheme,
         intended.netloc,
         intended.path,
-    ):
+    )
+    if not same_list or not source.get("tab_label"):
+        await navigate(page, source["url"])
+    if source.get("tab_label"):
+        await page.locator(auth_marker).wait_for(state="visible")
+        # Wait for the known tab bar before deciding an optional view is absent.
+        await page.get_by_role("tab", name="Going", exact=True).wait_for(state="visible")
         tab = page.get_by_role("tab", name=source["tab_label"], exact=True)
+        if not await tab.count() and source.get("optional"):
+            return False
         await tab.click()
         await expect(tab).to_have_attribute("aria-selected", "true", timeout=15000)
         await page.locator(source["container"]).wait_for(state="visible")
-    else:
-        await navigate(page, source["url"])
+    return True
 
 
 async def scrape(cfg, session) -> tuple[list, dict]:
@@ -220,6 +238,7 @@ async def scrape(cfg, session) -> tuple[list, dict]:
     requests = 0
     records = []
     counts = {}
+    source_notes = {}
     observed_only = any(s.get("completion") == "observed" for s in adapter["sources"])
     async with browser(session.load()) as context:
 
@@ -243,7 +262,21 @@ async def scrape(cfg, session) -> tuple[list, dict]:
         page = await context.new_page()
         shared_details = {}
         for source in adapter["sources"]:
-            await open_source(page, source)
+            if source.get("adapter") == "messages_stays":
+                from .hosting import collect_hosting
+
+                batch, note = await collect_hosting(page, source, adapter["auth_marker"])
+                counts[source["category"]] = len(batch)
+                if note:
+                    source_notes[source["category"]] = note
+                records.extend(batch)
+                continue
+            if not await open_source(page, source, adapter["auth_marker"]):
+                counts[source["category"]] = 0
+                source_notes[source["category"]] = (
+                    "View not present in this layout; no absence-based changes made"
+                )
+                continue
             source_records = {}
             detail_seen = shared_details if source.get("event_json_ld") else {}
             finished = False
@@ -297,9 +330,11 @@ async def scrape(cfg, session) -> tuple[list, dict]:
         **measured,
         "duration_seconds": round(time.monotonic() - started, 2),
         "sources": counts,
+        "source_notes": source_notes,
+        "layout": adapter.get("layout_version", "custom"),
         "complete": not observed_only,
         "observations_only": observed_only,
-        "coverage": "verified observed events; full-list coverage unverified"
+        "coverage": "verified observed records; full-list coverage unverified"
         if observed_only
         else (
             "inspected-count event lists"

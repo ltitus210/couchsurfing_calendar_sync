@@ -10,7 +10,17 @@ A working local calendar does not prove every source category, platform or clien
 | Account-specific Going/Interested/Organizing extraction | User reported the guarded live sync and an updated observation-mode sync | Other accounts, all RSVP transitions, invitations, full paging/completeness |
 | Local Apple Calendar | User confirmed subscription and displayed events/local times | iCloud, iPhone/iPad, remote HTTPS or Google Calendar |
 | macOS background service startup | User reported install/start/status for both jobs and managed-feed HTTP 200 | A later unattended scrape, session expiry handling or sleep/wake execution |
-| Automated code checks | Latest follow-up: 74 tests passed on Python 3.13.5 / Intel macOS; Ruff/build/secret scan passed | Native Windows runtime, hosted CI or authenticated site correctness beyond live samples |
+| Automated code checks | Shared-defaults follow-up: 97 tests passed on Python 3.13.5 / Intel macOS; Ruff/build/secret scan passed | Native Windows runtime, hosted CI or authenticated site correctness beyond live samples |
+
+## Shared defaults: fixture validation, not a new live account run
+
+New installs now use the observed shared event layout without initial inspection.
+Incoming hosting labels/controls, English empty captions and an optional Invited tab are
+explicit assumptions. Fictional Chromium fixtures verify populated/empty event tabs,
+Invited present/absent, incoming pending/confirmed stays and outgoing exclusion without
+clicking request actions. Database checks verify pending-to-confirmed UID preservation
+and retention when a later observation omits the stay. Existing override files take priority.
+No additional authenticated live scrape was performed for this change.
 
 ## User-reported live sequence
 
@@ -38,7 +48,8 @@ was available. Those categories remain unverified; no request was created or cha
 
 Initial checks passed on Python 3.13.5 and 3.14.5 with 38 tests; the structured-event follow-up
 passed 60 tests on Python 3.13.5. The latest observation/traffic/service follow-up passed
-**74 tests on Python 3.13.5 / Intel macOS**. The expanded 74-test suite has not been claimed
+**74 tests on Python 3.13.5 / Intel macOS**. The shared-defaults follow-up passed
+**97 tests on the same environment**. The expanded suite has not been claimed
 as executed on every supported OS/Python combination.
 
 Coverage includes:
@@ -81,7 +92,7 @@ committed. Tests that use intercepted pages do not contact the live Couchsurfing
 ## Limits that remain by design
 
 Missing records do not cause cancellation; explicit inactive states are required. Observation
-mode can update verified events without claiming every source record was retrieved. Empty
+mode can update individually validated records without claiming every source record was retrieved. Empty
 tabs need a verified explicit empty marker; failed selectors cannot mean “empty account.”
 Source/history records remain locally until data is removed; retention limits feed history.
 

@@ -1,74 +1,31 @@
-# First event sync: the maintainer handoff and the user's next commands
+# Existing event-first profiles
 
-For a first installation, follow [the guided macOS setup](setup-macos.md). In particular,
-[Chrome/Inspector actions](setup-macos.md#3-inspect-in-chrome)
-and [the configuration handoff](setup-macos.md#4-get-the-account-profile) must be
-completed before the commands below. Opening Inspector does not configure synchronization.
+**New installation?** Use [quick start](setup-macos.md). Built-in defaults need no initial
+inspection, supplied profile or fixed-count upgrade.
 
-## Before running anything here
+This page is only for older custom `events-first.toml` configurations. Keep their existing
+configuration argument; updating the code does not overwrite private selector files.
 
-A maintainer must have supplied `events-first.toml` and its referenced selector file in
-the private application directory. These are account-specific files outside Git. The setup
-wizard does not create them, and `upgrade-events` cannot create a missing initial profile.
-The maintainer must identify the exact path, scope and privacy settings.
+## Upgrade an older fixed-count profile
 
-The inspected scope is Going, Interested and Organizing. Invitations were not visible in
-the inspected tab group, and no incoming-hosting sample was available. Those features remain
-unverified. Outgoing “Your Request” stays are excluded. Do not create fake requests for tests.
-
-If Inspector is still paused after the maintainer finishes, click **Resume ▶** there.
-That saves the session, closes its Chrome window and returns to the Terminal prompt.
-Do not type login's `SAVE` response into an inspection session.
-
-## Update the installation
-
-After updating the project, activate its environment and reinstall:
+After updating the project, run:
 
 ```sh
 source .venv/bin/activate
 python -m pip install --no-deps --no-build-isolation -e .
-```
-
-Keep the final dot in `-e .`. Look for `Successfully installed couchsync`.
-
-## Run one live sync
-
-```sh
+couchsync --config "$HOME/Library/Application Support/couchsync/events-first.toml" scraper upgrade-events
 couchsync --config "$HOME/Library/Application Support/couchsync/events-first.toml" sync
-```
-
-**Expected for the original bootstrap profile:** `result: success`, plausible category
-counts, `complete: true` and `coverage: inspected-count event lists`. A positive count
-is an operator assertion about a known list, not general proof of pagination completeness.
-Changed counts stop that profile; do not raise them blindly or install an hourly worker yet.
-
-**Expected for an already-upgraded profile:** `result: updated_observations`,
-`observations_only: true`, `complete: false`. This is a successful update of verified
-observations, with missing entries preserved. It does not claim complete source coverage.
-
-**If `not_due`:** wait until the configured interval, normally an hour after the most recent
-attempt, has elapsed. Failed attempts/checks/dry-runs count too. Do not run check, dry-run
-and sync one after another or reset the guard. If a maintainer asks for a dry-run first,
-that is a separate live attempt and does not create the ICS snapshot.
-
-**If an error appears:** stop and use [troubleshooting](troubleshooting.md). Authentication,
-page structure, malformed dates or mismatched details must not be interpreted as missing events.
-
-## Preview locally, then check Calendar
-
-```sh
 couchsync --config "$HOME/Library/Application Support/couchsync/events-first.toml" preview
 ```
 
-Preview does not visit Couchsurfing. Verify event counts, prefixes and dates. It prints
-starts in UTC: `2026-11-13T00:00:00+00:00` is November 12 at 7 PM in America/New_York.
-Check local start/end times and multi-day spans in Calendar too.
+**Look for:** `upgraded` or `already_upgraded`, followed by `updated_observations`.
+If sync returns `not_due`, wait until an hour after the previous attempt. Preview is local.
+The upgrade saves a backup and removes fixed positive counts; missing entries remain retained.
+Built-in defaults return `already_current` because no migration is needed.
 
-**Next:** [serve and subscribe](setup-macos.md#6-subscribe-in-apple-calendar).
-A successful sync saves a file but does not start the HTTP server. `serve` must stay running
-in one terminal while a second terminal checks HTTP 200 and Calendar subscribes.
+Check titles and dates, then [subscribe](setup-macos.md#4-apple-calendar) and
+[enable services](setup-macos.md#5-background-services), using the same custom configuration
+argument throughout. No new inspection or duplicate Calendar subscription is required.
 
-**After the subscription displays correctly:** [upgrade and test once](setup-macos.md#7-upgrade-fixed-counts-if-needed),
-then [start background services](setup-macos.md#8-start-background-services). The upgrade
-backs up the old selector file, supports changing positive list sizes, and explicitly leaves
-full-list completeness unverified. Read [the limits](hourly-events.md) before unattended use.
+`complete: false` is expected in observation mode. It does not prove full-list coverage.
+Do not raise bootstrap counts just to make a run pass. [Update limits](hourly-events.md).

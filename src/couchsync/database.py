@@ -68,8 +68,10 @@ class Database:
     ) -> None:
         if not complete and not observations_only:
             raise ValueError("Incomplete scrape; database and snapshots preserved")
-        if observations_only and any(r.kind != "event" for r in records):
-            raise ValueError("Observation updates are limited to verified event records")
+        if observations_only and any(
+            r.kind == "hosting" and r.direction != "incoming" for r in records
+        ):
+            raise ValueError("Hosting observations must be incoming requests")
         records = deduplicate(records)
         stamp = now()
         active = self.db.execute("SELECT count(*) FROM records WHERE canceled=0").fetchone()[0]
@@ -87,7 +89,12 @@ class Database:
             previous = self.db.execute(
                 "SELECT * FROM records WHERE key=?", (record.key,)
             ).fetchone()
-            if observations_only and previous and record.status not in INACTIVE:
+            if (
+                observations_only
+                and previous
+                and record.kind == "event"
+                and record.status not in INACTIVE
+            ):
                 old = Record(**json.loads(previous["payload"]))
                 # Current attendance membership is observed, but absence from an incomplete
                 # organizer list does not prove organizer privileges were removed.

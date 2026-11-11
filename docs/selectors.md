@@ -1,75 +1,60 @@
-# Chrome and Playwright inspection: user handoff and maintainer reference
+# Optional inspection and website-layout repairs
 
-## If you are setting up your own account
+New installs use built-in shared defaults after login. No initial inspection or
+account-specific profile is required. Existing `selectors.toml` or configured selector
+files take precedence and are never overwritten by setup or an update.
 
-Use [the browser walkthrough](setup-macos.md#3-inspect-in-chrome)
-for the exact actions in each window. Opening `scraper inspect` is not an automatic setup step.
-It pauses the program so a maintainer can inspect the real website while you are logged in.
-You are not expected to invent or program selectors yourself.
+## When to inspect
 
-| Command | What happens | How you finish it |
-|---|---|---|
-| `couchsync login` | Chrome opens for normal interactive login | Return to Terminal, type `SAVE`, press Return |
-| `couchsync scraper inspect` | Chrome and Playwright Inspector open; Terminal waits | Leave Inspector paused during the inspection, then click its **Resume ▶** button |
+Update Couchsync first if scraping starts failing after a website change. If it still
+fails, run:
 
-For an existing event-first profile, place
-`--config "$HOME/Library/Application Support/couchsync/events-first.toml"` before either command.
-Do not substitute your everyday browser: the isolated Playwright browser has the session
-being inspected. If support cannot connect to it, the optional Pick Locator workflow is
-explained in the walkthrough. A URL alone is not enough to validate the authenticated DOM.
+```sh
+couchsync scraper inspect
+```
 
-Open **Events → View Your Events → Going**, an event's details, then Interested and
-Organizing. Confirm which tab is actually selected; the page title or URL can lag during
-navigation. Report missing tabs and explicit empty states rather than guessing. Do not
-change RSVPs, send messages or accept/cancel requests to obtain fixtures.
+| Window | Action |
+|---|---|
+| Chrome | Open the failing event tab, event details or incoming stay request. |
+| Playwright Inspector | Leave paused while inspecting. **Pick Locator → click the element → copy the locator** if requested. Turn the picker off to navigate. |
+| Terminal | Wait. Finish by clicking **Resume ▶ in Inspector**; Chrome closes and the prompt returns. |
 
-For incoming-hosting validation, the account owner must be the prospective host.
-**Pending Stay** can describe an outgoing request too. “Your Request,” “View Your Trip,”
-or “Waiting on [another person] to accept” identified the outgoing example in this setup.
-If no incoming example exists, record that limitation and continue only with an agreed,
-explicitly limited event profile. No fabricated request is needed.
+`login` is different: authenticate in Chrome, then type `SAVE` in Terminal.
+Use your existing `--config` argument for either command when applicable.
+Inspection saves the session but does not automatically rewrite selectors. Do not change
+RSVPs, send messages or accept/decline requests to obtain examples.
 
-**The handoff is complete only when a maintainer has supplied/checked the account's
-configuration and selector file.** Pressing Resume saves the session and closes Chrome;
-it does not create selectors. Stop at [the configuration handoff](setup-macos.md#4-get-the-account-profile)
-if those files do not exist. Synthetic test files are not settings for a real account.
+## Shared defaults and coverage
 
-## Maintainer: observations from the inspected website
+The versioned defaults in `couchsync.scraper.defaults` use the November 2026 English layout:
 
-No undocumented API endpoints or unobserved website selectors are asserted here. On
-November 10, 2026 the account's event tabs included Going, Organizing, Interested and Past;
-an Invited tab was not found in that view. Event details exposed
-`script[data-testid="hangout-json-ld"]` with structured Event data, including a canonical
-stable identifier and explicit UTC start/end timestamps. The narrow event profile has now
-been exercised by the user; this is not evidence for all accounts or every state.
+- Going, Interested and Organizing tabs, scoped event cards and structured Event JSON-LD.
+- Invited, when that tab is available; otherwise a diagnostic note and preserved data.
+- Messages → Chats / Chat Requests → Stays → Pending / Confirmed. Hosting uses assumed
+  incoming panel labels/controls with positive host-direction checks. “Your Request” and
+  “View Your Trip” are excluded. Host acceptance alone remains pending.
+- Explicit English empty-state captions; no timeout is interpreted as an empty list.
 
-Couchsurfing's current host guide describes Home → Your Guests → the traveler chat →
-View Request. Host acceptance is followed by traveler confirmation. An accepted chat or
-host-only acceptance must not be interpreted as a mutually confirmed stay. Incoming pending
-and confirmed stays still lack a live sample in this account's validation.
+Incoming hosting, invitation/empty states and other languages still need live validation.
+Unrecognized hosting panels are skipped with `source_notes`; event sources can still update.
+The adapter never reads private conversation bodies for calendar data or clicks request actions.
+All defaults use observation mode: missing records stay and full-list coverage is unverified.
+Hosting checks at most 20 observed chats per run; this is not complete inbox traversal.
 
-[Official host-request guidance](https://support.couchsurfing.org/hc/en-us/articles/50055202137115-How-Do-I-Receive-and-Manage-Stay-Requests-A-Guide-for-Hosts).
+## Maintainer: apply a repair
 
-## Maintainer: profile creation is a manual prerequisite
+Prefer updating shared defaults and fictional regression fixtures so every user benefits.
+For a local override only, export an editable profile:
 
-`setup` creates general `config.toml` settings. It does not create `selectors.toml`,
-`events-first.toml`, or `events-first.selectors.toml`. `upgrade-events` only migrates an
-existing compatible event profile. There is no command in this release that discovers
-selectors and completes this handoff automatically.
+```sh
+couchsync scraper export-defaults
+```
 
-1. Inspect the authenticated-only navigation and each enabled account list. Determine
-   incoming-only hosting scope separately. Collect only fields required for the calendar.
-2. Create a non-secret configuration selecting only verified categories. For the staged
-   event workflow, use a separate `events-first.toml` beside the main config, sharing the
-   established session/data locations, and leave remote publication unconfigured during
-   initial testing. Do not silently change the main configuration's requested scope.
-3. Point `selector_file` at the chosen selector profile. It is relative to the configuration
-   directory unless absolute; its default is `selectors.toml`.
-4. Author the profile below and validate it against observed pages. A positive first-sync
-   count must come from inspection, never a number selected to make a run pass.
-5. Give the account owner the exact configuration path, categories, privacy settings,
-   coverage policy and **one** next live command. They should not have to infer a sequence
-   from `setup`'s terse list of possible commands.
+This creates a private selector file and refuses to overwrite one. It does not inspect
+or discover selectors. Edit it against the failing page, then choose **one** live sync,
+check or dry-run after the hourly guard permits. Remove an exported override only when you
+intend to return to package defaults. A missing explicitly named custom file is an error;
+an absent default `selectors.toml` selects the bundled profile.
 
 ### Generic selector-profile contract
 
@@ -104,14 +89,14 @@ dates. Same-tab navigation checks metadata identity after clicking a normal even
 | Policy | What may be reported | Missing entries |
 |---|---|---|
 | Inspected positive `expected_count` | Guarded bootstrap batch matching a manually inspected count; exact count changes stop it | Retained; this is not universal pagination proof |
-| `completion = "observed"` for structured events | `complete: false`, `observations_only: true`; individual observed records can update | Retained; list completeness and absence-based changes are unverified |
+| `completion = "observed"` for structured events / guarded incoming stays | `complete: false`, `observations_only: true`; individual observed records can update | Retained; list completeness and absence-based changes are unverified |
 | Validated generic explicit end markers | Complete under that source's inspected paging policy | Retained unless an inactive state is explicitly verified |
 
 Observation mode removes fixed positive-count restrictions but does not turn a stable
 rendered list into proof of completeness. An empty tab still requires a verified explicit
-empty marker; contradictory empty/record states fail. A page/auth/parser failure aborts
-the batch in all modes. Complete-source checks remain necessary for sources claiming
-full coverage. [Upgrade behavior and limits](hourly-events.md) explain the event-only mode.
+empty marker; contradictory empty/record states fail. Required event/auth/parser failures abort
+the batch; unrecognized optional hosting panels are reported and skipped. Complete-source checks remain necessary for sources claiming
+full coverage. [Upgrade behavior and limits](hourly-events.md) explain observation mode.
 
 ## Validation and safe reports
 

@@ -1,9 +1,8 @@
 # macOS installation, updates and background services
 
 **First installation:** use [the guided setup](setup-macos.md), which includes the installation
-commands, virtual environment, login, Chrome/Inspector handoff, first sync,
-HTTP check, Calendar subscription and background-service checkpoints. Do not use this
-reference as a shortcut around the required account-profile handoff.
+commands, virtual environment, login, first sync,
+HTTP check, Calendar subscription and background-service checkpoints. Shared website defaults are included; inspection is only needed for repairs.
 
 Requirements: Python 3.13+, macOS 15+, Intel or Apple Silicon. The primary live setup was
 checked on Intel macOS with Python 3.13.5. Keep the project's `.venv` and config
@@ -39,7 +38,7 @@ Keychain must be available to the logged-in account; insecure credential backend
 
 ## First start and the manual-server handoff
 
-After one successful observation-mode live run, follow [setup stage 8](setup-macos.md#8-start-background-services).
+After one successful observation-mode live run, follow [setup stage 5](setup-macos.md#5-background-services).
 Stop the manually running `serve` command with Ctrl-C before starting the managed publisher,
 so two processes do not compete for port 8765. Confirm both jobs report active and check:
 

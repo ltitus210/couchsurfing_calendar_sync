@@ -1,9 +1,12 @@
 # From the first successful calendar to background event updates
 
-For the complete user sequence, use [guided setup, stages 7–9](setup-macos.md#7-upgrade-fixed-counts-if-needed).
-This page explains the update policy, traffic counters and separate service controls.
+For the complete user sequence, use [guided setup](setup-macos.md).
+New installs already use observation mode; no upgrade or initial inspection is needed.
+This page explains update limits and the optional migration for older custom profiles.
+Commands below with `events-first.toml` apply only to those existing profiles; new users
+use the plain commands in the quick start.
 If both services already report active and the feed returns HTTP 200, do not reinstall;
-[verify the next unattended run](setup-macos.md#9-check-the-next-hourly-run).
+[verify the next unattended run](setup-macos.md#6-check-the-hourly-run).
 
 ## What the new mode verifies
 
@@ -21,13 +24,14 @@ structured EventCancelled states can cancel known entries, with the same mass-ca
 safeguard as before. Previously known organizer membership is retained when an incomplete
 organizer list cannot disprove it. Attendance statuses can update when observed in a list.
 
-A list with no cards requires an actually inspected, configured explicit empty-state marker.
+A list with no cards requires a recognized explicit empty-state marker.
 Without one, the run stops rather than accepting a failed selector as an empty account.
-This means an empty tab may need further adapter inspection. Full pagination, missing-RSVP
-verification, invitations and incoming hosting remain unfinished. Do not describe this as
+This means an empty tab may need further adapter inspection. Full pagination and missing-RSVP
+verification remain unverified. Bundled invitation and incoming-hosting assumptions still
+need live validation; optional unavailable views are reported rather than blocking events. Do not describe this as
 complete Couchsurfing synchronization. Hourly use is limited to these observation semantics.
 
-## Update and test once
+## Older fixed-count profiles: update and test once
 
 After updating the project, activate its existing `.venv`:
 

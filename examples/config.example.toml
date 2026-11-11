@@ -1,5 +1,8 @@
 # Copy to the location printed by `couchsync setup` (platformdirs user config directory).
 # No passwords, feed tokens, cookies, or API keys belong here.
+# Shared website defaults are bundled; initial inspection is not required.
+# Optional local repair override (relative to this config):
+# selector_file = "custom-selectors.toml"
 name = "Couchsurfing"
 interval = 3600
 retention_days = 90

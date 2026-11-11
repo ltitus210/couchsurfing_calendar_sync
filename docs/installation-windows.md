@@ -1,6 +1,7 @@
 # Windows 10/11
 
-Install Python 3.13+ from python.org, then in PowerShell in this project:
+Native Windows runtime still needs validation. Install Python 3.13+ from python.org,
+then run in PowerShell in this project:
 
 ```powershell
 py -3.13 -m venv .venv
@@ -10,43 +11,52 @@ py -3.13 -m venv .venv
 .\.venv\Scripts\python -m playwright install chromium
 .\.venv\Scripts\couchsync setup
 .\.venv\Scripts\couchsync login
-.\.venv\Scripts\couchsync scraper inspect
 ```
 
-## Browser inspection is not automatic configuration
+**Chrome:** log in. **PowerShell:** type `SAVE` at the login prompt and press Enter.
+Skip `login` if you already logged in during setup. Shared website defaults are included;
+no initial inspection or supplied selector profile is needed.
 
-If setup already opened login and saved it, skip the separate login command. For standalone
-login, authenticate in Chrome, then type `SAVE` in Terminal. For `scraper inspect`, use
-Chrome to navigate and leave Inspector paused; finish with **Resume ▶ in Inspector**,
-not `SAVE`. See the shared [Chrome/Inspector walkthrough](setup-macos.md#3-inspect-in-chrome)
-for the window roles and page-selection steps; use the Windows executable paths above
-rather than copying its macOS shell commands.
+```powershell
+.\.venv\Scripts\couchsync sync
+.\.venv\Scripts\couchsync preview
+.\.venv\Scripts\couchsync serve
+```
 
-Opening Inspector does not generate an account-specific selector/profile file. Stop for
-[the maintainer handoff](setup-macos.md#4-get-the-account-profile) before attempting
-sync. `events-first.toml` is a supplied profile convention, not automatic setup output.
-No incoming hosting sample means that coverage remains unverified; an outgoing “Your Request”
-page is not an incoming hosting example. Do not create requests just to test this.
+**Look for:** `updated_observations`, plausible titles/dates, then a running server.
+`complete: false` means full-list coverage is unverified; missing records stay.
+`not_due` means wait until an hour after the last attempt. Read `source_notes` for
+unavailable invitation/hosting views. [Coverage limits](validation.md).
 
-After a profile is supplied, choose one live sync/check/dry-run attempt, then preview locally.
-`not_due` means wait for the configured interval. Observation-mode `complete: false` is an
-expected coverage limit, not a failed run. See [first-sync outcomes](event-first-sync.md).
+Leave the server running for local clients. Google Calendar requires
+[remote HTTPS publication](remote-publishing.md), rather than a loopback URL.
 
 ## Task Scheduler
 
-After a validated sync run `service install` and `service start`
-using the same couchsync executable. Task Scheduler registers Couchsync-sync and
-Couchsync-serve as the current user, InteractiveToken, LeastPrivilege. The sync task repeats
-hourly from logon with StartWhenAvailable and IgnoreNew. The publisher starts at logon,
-runs without a time limit and retries failures three times. `start`, `stop`, `status`,
-`uninstall` use schtasks /Run, /End, /Query, /Delete respectively.
+After validating a sync, stop manual `serve` with Ctrl-C, then run:
 
-The user must be logged in; these are not SYSTEM tasks or Windows Services. Credential
-Manager must be unlocked/available. Sleep and logoff interrupt availability. No computer
-wake is requested; missed timed work can run later subject to Task Scheduler and the
-worker's interval guard. Do not promise exact execution times. Reinstall if the Python
-path changes. Native registration/runtime still needs validation on Windows; XML structure
-is tested on macOS and CI is configured for Windows.
+```powershell
+.\.venv\Scripts\couchsync service install
+.\.venv\Scripts\couchsync service start
+.\.venv\Scripts\couchsync service status
+```
 
-`service <action> --task serve` and `--task sync` target one scheduled task independently;
-`--task all` is the default. Fixed-count bootstrap profiles are rejected for worker installation.
+**Look for:** both tasks active. Check `status` and `logs` after an hour for a newer
+`last_success`; loaded tasks alone do not prove a scheduled scrape succeeded.
+
+Task Scheduler registers Couchsync-sync and Couchsync-serve as the current user,
+InteractiveToken, LeastPrivilege. The sync repeats hourly from logon with StartWhenAvailable
+and IgnoreNew. The publisher starts at logon and retries failures three times.
+Use `--task serve` or `--task sync` to target one task; the default is both.
+
+The user must be logged in and Credential Manager available. Sleep/logoff interrupt
+availability. No computer wake or exact timing is promised. Reinstall tasks if the Python
+path changes. Windows registration/runtime remains unverified; XML definitions are tested.
+Existing custom profiles still take precedence; older fixed-count profiles need
+[upgrade](event-first-sync.md) before worker installation.
+
+## If the website changes
+
+Use `scraper inspect` only for troubleshooting. [Browser instructions](selectors.md):
+navigate in Chrome; finish with **Resume ▶ in Playwright Inspector**, not `SAVE`.
+Inspection does not automatically rewrite settings.

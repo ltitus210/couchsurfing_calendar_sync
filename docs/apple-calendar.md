@@ -1,16 +1,16 @@
 # Apple Calendar: verify the server, then subscribe
 
-For the complete sequence, see [guided setup, stage 6](setup-macos.md#6-subscribe-in-apple-calendar).
+For the complete sequence, see [guided setup, stage 4](setup-macos.md#4-apple-calendar).
 The local On My Mac subscription has been exercised successfully in one user setup;
 iCloud, iPhone/iPad and remote HTTPS behavior still require their own validation.
 
 ## 1. Keep a publisher running
 
 In the project's activated environment, start the saved-feed server with the
-same configuration used for sync:
+same configuration used for sync (add your usual `--config` if using a custom profile):
 
 ```sh
-couchsync --config "$HOME/Library/Application Support/couchsync/events-first.toml" serve
+couchsync serve
 ```
 
 It keeps this terminal busy. Leave it running. Current versions print a serving message;
@@ -53,7 +53,7 @@ correct previous-evening local event.
 
 ## 4. Replace the manual terminal with a service
 
-After the validated setup reaches [background services](setup-macos.md#8-start-background-services),
+After the validated setup reaches [background services](setup-macos.md#5-background-services),
 stop manual `serve` with Ctrl-C, start the managed publisher, then confirm HTTP 200 again.
 Keep the existing subscription URL; do not add another calendar. Once the publisher is
 loaded and the feed works, terminals can be closed.

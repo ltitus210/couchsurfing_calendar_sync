@@ -146,9 +146,11 @@ def test_worker_failure_and_due_guard(cfg):
             run(cfg, None, None)
 
 
-def test_selectors_require_inspection(cfg):
+def test_bundled_defaults_and_missing_custom_profile(cfg):
+    bundled = load(cfg.selectors, cfg.categories)
+    assert bundled["layout_version"] and not cfg.selectors.exists()
     with pytest.raises(SelectorError):
-        load(cfg.selectors, cfg.categories)
+        load(cfg.config.parent / "missing-custom.toml", cfg.categories)
     adapter = load(FIXTURES / "selectors.synthetic.toml", ["interested"])
     assert len(adapter["sources"]) == 1
     with pytest.raises(SelectorError):

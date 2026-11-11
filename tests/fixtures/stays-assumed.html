@@ -1,0 +1,13 @@
+<!doctype html><html><head><title>Synthetic Guest - Messages - Couchsurfing</title></head><body>
+<button aria-label="Profile">Profile</button><div id="app"></div><script>
+let stays=false;
+const examples={Incoming_ch:{id:'Incoming_tp_cs',banner:'Pending Stay',heading:'Stay Request',controls:'<button onclick="window.unsafe()">Accept Stay</button><button onclick="window.unsafe()">Decline</button>'},Confirmed_ch:{id:'Confirmed_tp_cs',banner:'Confirmed Stay',heading:'Your Guest',controls:''},Outgoing_ch:{id:'Outgoing_tp_cs',banner:'Pending Stay',heading:'Your Request',controls:'<button>View Your Trip</button><button onclick="window.unsafe()">Cancel Request</button>'}};
+function render(){
+const area=document.querySelector('#app');if(location.pathname==='/c/home'){area.innerHTML='<button data-messages>Messages</button>';return;}
+const chat=location.pathname.split('/')[3];const example=examples[chat];
+const sidebar='<h1>Messages</h1><aside><nav role="tablist"><button role="tab">Chats</button><button role="tab">Chat Requests</button></nav><div><input type="search" aria-label="Search"></div><button data-stays aria-pressed="'+stays+'">Stays</button><button data-filter>Pending</button><button data-filter>Confirmed</button><div>'+Object.keys(examples).map(id=>'<a href="/c/chat/'+id+'">Synthetic chat</a>').join('')+'</div></aside>';
+let main='';if(example){main='<section><a data-detail href="/c/chat/'+chat+'/stays/'+example.id+'">'+example.banner+'</a><ul role="log"><li>PRIVATE MESSAGE NOT TO BE EXTRACTED</li></ul><textarea aria-label="Type your message"></textarea></section>';if(location.pathname.includes('/stays/'))main+='<aside><h4>'+example.heading+'</h4><div><span>When</span><p>Wednesday, November 11 – Thursday, November 12, 2026</p></div><div><span>Travelers</span><p>1 Traveler</p></div>'+example.controls+'</aside>';}
+area.innerHTML=sidebar+main;
+}
+document.addEventListener('click',e=>{if(e.target.closest('[data-messages]')){history.pushState({},'', '/c/chat');render();}if(e.target.closest('[data-stays]')){stays=!stays;render();}const link=e.target.closest('a[data-detail]');if(link){e.preventDefault();history.pushState({},'',link.getAttribute('href'));render();}});render();
+</script></body></html>
