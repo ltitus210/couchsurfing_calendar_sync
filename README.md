@@ -43,11 +43,25 @@ Keep the server Terminal open until you [enable background services](docs/setup-
 - [Enable background services](docs/setup-macos.md#5-background-services)
 - [Troubleshoot an error](docs/troubleshooting.md)
 
-**Coverage:** Going, Interested and Organizing use the observed shared layout. Invited is
-included when that tab exists. Incoming pending/confirmed hosting uses a guarded assumed
-layout; outgoing stays are excluded. Unavailable optional views produce `source_notes`.
-Hosting, invitations and English empty-state wording still need live validation.
-Existing selector overrides take precedence. [Validation details](docs/validation.md).
+## What is synchronized?
+
+| Calendar label | Couchsurfing item |
+|---|---|
+| Event: Going / Interested / Organizing / Invited | Events you attend, follow, organize or are invited to |
+| Hosting Request: Pending / Confirmed | Incoming requests from guests staying with you |
+| Stay: Pending / Confirmed | Outgoing requests you sent to hosts; you are surfing |
+
+Event entries include the venue/postal address, About text and source page URL with
+the default Limited or Full privacy settings. These details refresh on successful syncs
+of the event; the same calendar entry is updated. Requests/stays also include source links.
+Generic, Busy and Private settings hide links. Opening a private request/stay link requires
+Couchsurfing login. Pending stays are free; confirmed stays are busy by default.
+
+**Coverage:** events use the observed shared layout. Invited is included when that tab exists.
+Hosting requests and outgoing stays use the guarded shared stays layout; unrecognized panels
+produce `source_notes`. Incoming/confirmed layouts, invitations and English empty captions
+still need live validation. Existing selector overrides take precedence.
+[Validation details](docs/validation.md).
 
 ## Reference
 

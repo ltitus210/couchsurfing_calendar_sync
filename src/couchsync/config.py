@@ -8,7 +8,7 @@ from platformdirs import PlatformDirs
 
 from .util import https_url, private_dir
 
-FEEDS = {"all", "organized", "events", "hosting", "confirmed"}
+FEEDS = {"all", "organized", "events", "hosting", "stays", "confirmed"}
 MODES = {"full", "limited", "generic", "busy", "private"}
 
 

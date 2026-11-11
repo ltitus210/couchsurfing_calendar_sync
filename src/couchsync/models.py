@@ -31,7 +31,9 @@ class Record:
 
     @property
     def key(self) -> str:
-        return f"{self.kind}:{self.source_id}"
+        # Preserve existing incoming/event keys while separating outgoing stays.
+        kind = "stay" if self.kind == "hosting" and self.direction == "outgoing" else self.kind
+        return f"{kind}:{self.source_id}"
 
     def validate(self) -> None:
         if self.kind not in {"event", "hosting"} or not self.source_id or len(self.source_id) > 200:
@@ -40,8 +42,8 @@ class Record:
             raise ValueError("Unknown source status")
         if set(self.relationships) - ACTIVE:
             raise ValueError("Unknown relationship")
-        if self.kind == "hosting" and self.direction != "incoming":
-            raise ValueError("Outgoing hosting is not supported")
+        if self.kind == "hosting" and self.direction not in {"incoming", "outgoing"}:
+            raise ValueError("Stay direction must be incoming or outgoing")
         if self.kind == "event" and self.status in {"pending", "confirmed"}:
             raise ValueError("Hosting status on event")
         if self.kind == "hosting" and self.status in {

@@ -19,6 +19,7 @@ from couchsync.scraper.hosting import (
     collect_hosting,
     incoming_status,
     stay_dates,
+    stay_state,
 )
 from couchsync.scraper.selectors import SelectorError, load
 
@@ -184,7 +185,7 @@ def test_stay_panel_parser_ignores_message_contents():
     asyncio.run(check())
 
 
-def test_assumed_hosting_ui_is_read_only_and_excludes_outgoing():
+def test_assumed_stays_ui_is_read_only_and_includes_both_directions():
     fixture = (Path(__file__).parent / "fixtures/stays-assumed.html").read_text()
 
     async def check():
@@ -198,21 +199,35 @@ def test_assumed_hosting_ui_is_read_only_and_excludes_outgoing():
             page = await context.new_page()
             source = next(s for s in profile(["hosting"])["sources"])
             records, note = await collect_hosting(page, source, 'role=button[name="Profile"]')
-            assert len(records) == 2
+            assert len(records) == 5
             assert {r.status for r in records} == {"pending", "confirmed"}
-            assert all(
-                r.direction == "incoming" and r.start == "2026-11-11" and r.end == "2026-11-12"
-                for r in records
+            assert all(r.start == "2026-11-11" and r.end == "2026-11-12" for r in records)
+            assert {r.direction for r in records} == {"incoming", "outgoing"}
+            assert (
+                next(r for r in records if r.source_id == "OutgoingAccepted_tp_cs").status
+                == "pending"
             )
-            assert "outgoing requests excluded" in note
+            assert (
+                next(r for r in records if r.source_id == "OutgoingConfirmed_tp_cs").status
+                == "confirmed"
+            )
+            assert all(r.url.endswith("/stays/" + r.source_id) for r in records)
+            assert "1 unrecognized stay panels skipped" in note
             assert "PRIVATE MESSAGE" not in str(records) and unsafe == []
 
     asyncio.run(check())
 
 
-def test_hosting_observations_update_pending_keep_uid_and_retain_missing(cfg):
+@pytest.mark.parametrize("direction", ["incoming", "outgoing"])
+def test_stay_observations_update_pending_keep_uid_and_retain_missing(cfg, direction):
     pending = Record(
-        "SyntheticStay", "hosting", "Synthetic guest", "2026-11-11", "2026-11-12", status="pending"
+        "SyntheticStay",
+        "hosting",
+        "Synthetic person",
+        "2026-11-11",
+        "2026-11-12",
+        status="pending",
+        direction=direction,
     )
     db = Database(cfg.data / "test.db")
     try:
@@ -228,7 +243,22 @@ def test_hosting_observations_update_pending_keep_uid_and_retain_missing(cfg):
             db.apply([], False, observations_only=True)
         assert db.rows()[0] == confirmed
         with pytest.raises(ValueError), db.transaction():
-            db.apply([replace(pending, direction="outgoing")], False, observations_only=True)
+            db.apply([replace(pending, direction="unknown")], False, observations_only=True)
         assert db.rows()[0] == confirmed
     finally:
         db.close()
+
+
+@pytest.mark.parametrize(
+    "banner,expected",
+    [
+        ("Pending Stay", "pending"),
+        ("Accepted Stay", "pending"),
+        ("Confirmed Stay", "confirmed"),
+        ("Upcoming Stay", "confirmed"),
+    ],
+)
+def test_outgoing_stay_state_uses_explicit_metadata(banner, expected):
+    assert stay_state("Your Request", banner, False, False, True) == ("outgoing", expected)
+    assert stay_state("Your Request", banner, True, True, True) is None
+    assert stay_state("Your Stay", banner, False, False, False) is None

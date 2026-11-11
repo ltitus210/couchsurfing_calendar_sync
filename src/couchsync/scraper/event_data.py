@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import re
+from html.parser import HTMLParser
 from urllib.parse import urlsplit
 
 from ..models import Record
@@ -19,6 +20,79 @@ RELATIONSHIPS = {
     "interested": "interested",
     "invited": "invited",
 }
+
+
+class AboutText(HTMLParser):
+    """Convert event About markup to readable calendar text without executing HTML."""
+
+    BLOCKS = {"p", "div", "br", "li", "ul", "ol", "h1", "h2", "h3", "h4", "blockquote"}
+    HIDDEN = {"script", "style", "iframe"}
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.parts = []
+        self.hidden = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag in self.HIDDEN:
+            self.hidden.append(tag)
+        elif not self.hidden and tag in self.BLOCKS:
+            self.parts.append("\n")
+
+    def handle_endtag(self, tag):
+        if self.hidden:
+            if tag == self.hidden[-1]:
+                self.hidden.pop()
+        elif tag in self.BLOCKS:
+            self.parts.append("\n")
+
+    def handle_data(self, data):
+        if not self.hidden:
+            self.parts.append(data)
+
+
+def about_text(value: str) -> str:
+    parser = AboutText()
+    parser.feed(value)
+    parser.close()
+    lines = [line.strip() for line in "".join(parser.parts).splitlines()]
+    return "\n".join(line for line in lines if line)
+
+
+def event_location(location: dict) -> str:
+    """Use only the venue/address supplied by the event; never infer or geocode it."""
+    if not isinstance(location, dict) or not isinstance(location.get("name", ""), str):
+        raise SelectorError("Event location structure changed")
+    name = location.get("name", "").strip()
+    address = location.get("address", "")
+    if isinstance(address, str):
+        parts = [name, address.strip()]
+    elif isinstance(address, dict):
+        fields = {}
+        for key in ("streetAddress", "addressLocality", "addressRegion", "postalCode"):
+            value = address.get(key, "")
+            if not isinstance(value, str):
+                raise SelectorError("Event postal address structure changed")
+            fields[key] = value.strip()
+        country = address.get("addressCountry", "")
+        if isinstance(country, dict):
+            country = country.get("name", "")
+        if not isinstance(country, str):
+            raise SelectorError("Event postal country structure changed")
+        region_postal = " ".join(filter(None, [fields["addressRegion"], fields["postalCode"]]))
+        city = ", ".join(filter(None, [fields["addressLocality"], region_postal]))
+        parts = [name, fields["streetAddress"], city, country.strip()]
+    else:
+        raise SelectorError("Event postal address structure changed")
+    # A venue name can already be its street address. Avoid identical repeated lines.
+    result = []
+    seen = set()
+    for part in parts:
+        normalized = " ".join(part.split()).casefold()
+        if normalized and normalized not in seen:
+            seen.add(normalized)
+            result.append(part)
+    return "\n".join(result)
 
 
 def event_record(raw: str, category: str) -> Record:
@@ -52,9 +126,7 @@ def event_record(raw: str, category: str) -> Record:
             raise SelectorError("Structured event title or dates missing")
     relationship = RELATIONSHIPS[category]
     canceled = event_status.endswith("EventCancelled")
-    location = data.get("location", {})
-    if not isinstance(location, dict) or not isinstance(location.get("name", ""), str):
-        raise SelectorError("Event location structure changed")
+    location = event_location(data.get("location", {}))
     description = data.get("description", "")
     if not isinstance(description, str):
         raise SelectorError("Event description structure changed")
@@ -68,8 +140,8 @@ def event_record(raw: str, category: str) -> Record:
         raw_status=f"{relationship}; {event_status}",
         relationships=[] if canceled else [relationship],
         url=url,
-        description=description,
-        location=location.get("name", ""),
+        description=about_text(description),
+        location=location,
     )
     try:
         record.validate()

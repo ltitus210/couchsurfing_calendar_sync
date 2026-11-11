@@ -141,7 +141,7 @@ def test_hosting_pending_confirmed_and_dates(db, cfg):
 
 
 @pytest.mark.parametrize("mode", ["limited", "generic", "busy", "private"])
-def test_privacy_no_metadata_leaks(db, cfg, mode):
+def test_event_privacy_filters_selected_fields(db, cfg, mode):
     cfg.event_privacy = mode
     record = replace(
         event(),
@@ -156,7 +156,7 @@ def test_privacy_no_metadata_leaks(db, cfg, mode):
     if mode != "limited":
         assert b"SECRET" not in data
     else:
-        assert b"SECRET ADDRESS" not in data and b"SECRET DESCRIPTION" not in data
+        assert b"SECRET ADDRESS" in data and b"SECRET DESCRIPTION" in data
     if mode in {"busy", "private"}:
         assert b"X-COUCHSYNC" not in data and b"CATEGORIES" not in data
 
@@ -270,3 +270,67 @@ def test_insecure_keyring_backend_rejected(monkeypatch):
     monkeypatch.setattr(keyring, "get_keyring", lambda: object())
     with pytest.raises(RuntimeError):
         Vault("test")
+
+
+@pytest.mark.parametrize("direction", ["incoming", "outgoing"])
+@pytest.mark.parametrize("mode", ["full", "limited", "generic", "busy", "private"])
+def test_stay_calendar_direction_labels_urls_and_privacy(db, cfg, direction, mode):
+    cfg.hosting_privacy = mode
+    cfg.feeds = {"all": {}, "hosting": {}, "stays": {}, "confirmed": {}}
+    url = "https://www.couchsurfing.com/c/chat/Synthetic_ch/stays/Synthetic_tp_cs"
+    record = Record(
+        "Synthetic_tp_cs",
+        "hosting",
+        "PERSON NAME",
+        "2026-12-01",
+        "2026-12-03",
+        status="pending",
+        direction=direction,
+        url=url,
+    )
+    apply(db, [record])
+    item = components(db, cfg)[0]
+    uid = item["uid"]
+    assert str(item["transp"]) == "TRANSPARENT"
+    if mode in {"full", "limited"}:
+        assert str(item["url"]) == url
+    else:
+        assert "url" not in item
+    if mode in {"busy", "private"}:
+        assert str(item["summary"]) == "Busy"
+        assert "x-couchsync-direction" not in item
+    else:
+        label = "Stay" if direction == "outgoing" else "Hosting Request"
+        assert str(item["summary"]).startswith(label + " [Pending]")
+        assert str(item["x-couchsync-direction"]) == direction
+        assert ("Staying with" if direction == "outgoing" else "Hosting") in str(item["summary"])
+    if mode != "full":
+        assert b"PERSON NAME" not in generate(db.rows(), cfg)
+    assert len(components(db, cfg, "hosting")) == int(direction == "incoming")
+    assert len(components(db, cfg, "stays")) == int(direction == "outgoing")
+    apply(db, [replace(record, status="confirmed")])
+    item = components(db, cfg, "confirmed")[0]
+    assert item["uid"] == uid and int(item["sequence"]) == 1
+    assert str(item["transp"]) == "OPAQUE"
+
+
+@pytest.mark.parametrize("status", ["going", "interested", "organizing", "invited"])
+def test_event_calendar_labels_and_default_source_url(db, cfg, status):
+    url = "https://www.couchsurfing.com/c/events/synthetic-Example_ho"
+    apply(db, [event(status, url=url)])
+    item = components(db, cfg)[0]
+    assert str(item["summary"]).startswith(f"Event [{status.title()}]")
+    assert str(item["url"]) == url
+
+
+def test_incoming_and_outgoing_stays_have_distinct_keys_without_changing_old_keys(db, cfg):
+    incoming = Record(
+        "same", "hosting", "Synthetic person", "2026-12-01", "2026-12-03", status="pending"
+    )
+    outgoing = replace(incoming, direction="outgoing")
+    assert incoming.key == "hosting:same" and outgoing.key == "stay:same"
+    apply(db, [incoming, outgoing])
+    assert len({row["uid"] for row in db.rows()}) == 2
+    cfg.feeds = {"stays": {}}
+    cfg.validate()
+    assert len(components(db, cfg, "stays")) == 1

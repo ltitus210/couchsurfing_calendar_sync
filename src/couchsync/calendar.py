@@ -24,7 +24,9 @@ def generate(rows: list[dict], cfg: Config, feed: str = "all") -> bytes:
             continue
         if feed == "events" and r.kind != "event":
             continue
-        if feed == "hosting" and r.kind != "hosting":
+        if feed == "hosting" and (r.kind != "hosting" or r.direction != "incoming"):
+            continue
+        if feed == "stays" and (r.kind != "hosting" or r.direction != "outgoing"):
             continue
         if feed == "confirmed" and (r.kind != "hosting" or r.status != "confirmed"):
             continue
@@ -41,20 +43,27 @@ def generate(rows: list[dict], cfg: Config, feed: str = "all") -> bytes:
             f"{r.kind if r.kind == 'hosting' else 'event'}_privacy",
             cfg.hosting_privacy if r.kind == "hosting" else cfg.event_privacy,
         )
+        category = (
+            "Event"
+            if r.kind == "event"
+            else "Stay"
+            if r.direction == "outgoing"
+            else "Hosting Request"
+        )
         prefix = cfg.prefixes.get(r.status, f"[{r.status.title()}]")
         title = r.title
         if r.kind == "hosting":
-            title = (
-                f"Couchsurfing: Hosting {r.title}"
-                if privacy == "full"
-                else "Couchsurfing: Hosting guest"
+            action = "Staying with" if r.direction == "outgoing" else "Hosting"
+            person = (
+                r.title if privacy == "full" else ("host" if r.direction == "outgoing" else "guest")
             )
+            title = f"Couchsurfing: {action} {person}"
         elif privacy in {"generic", "limited"}:
             title = r.title if privacy == "limited" else "Couchsurfing event"
         if privacy in {"busy", "private"}:
             title = "Busy"
         else:
-            title = f"{prefix} {title}"
+            title = f"{category} {prefix} {title}"
         ev = Event()
         ev.add("uid", row["uid"])
         ev.add("dtstart", start)
@@ -68,13 +77,15 @@ def generate(rows: list[dict], cfg: Config, feed: str = "all") -> bytes:
         ev.add("transp", "OPAQUE" if cfg.busy.get(r.status, False) else "TRANSPARENT")
         ev.add("class", "PRIVATE")
         if privacy not in {"busy", "private"}:
-            ev.add("categories", [r.kind])
+            ev.add("categories", [category])
+            if r.kind == "hosting":
+                ev.add("x-couchsync-direction", r.direction)
             ev.add("x-couchsync-status", r.status)
             ev.add("x-couchsync-relationships", ",".join(r.relationships))
-        if privacy == "full":
+        if privacy == "full" or (r.kind == "event" and privacy == "limited"):
             ev.add("description", r.description)
             ev.add("location", r.location)
-            if r.url:
-                ev.add("url", r.url)
+        if privacy in {"full", "limited"} and r.url:
+            ev.add("url", r.url)
         cal.add_component(ev)
     return cal.to_ical()

@@ -8,7 +8,10 @@ interval = 3600
 retention_days = 90
 max_cancellations = 0.5
 port = 8765
+# Event categories plus hosting (incoming Hosting Requests and outgoing Stays).
 categories = ["organized", "going", "interested", "invited", "hosting"]
+# Limited events include venue/address, About text and source URL.
+# Use generic/busy/private to hide event descriptions and locations.
 event_privacy = "limited"
 hosting_privacy = "limited"
 [busy]
@@ -29,6 +32,7 @@ confirmed = "[Confirmed]"
 [feeds.organized]
 [feeds.events]
 [feeds.hosting]
+[feeds.stays]
 [feeds.confirmed]
 hosting_privacy = "private"
 # Optional: provision a TLS WebDAV server as described in docs/remote-publishing.md.

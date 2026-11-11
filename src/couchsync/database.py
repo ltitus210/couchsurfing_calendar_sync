@@ -68,10 +68,6 @@ class Database:
     ) -> None:
         if not complete and not observations_only:
             raise ValueError("Incomplete scrape; database and snapshots preserved")
-        if observations_only and any(
-            r.kind == "hosting" and r.direction != "incoming" for r in records
-        ):
-            raise ValueError("Hosting observations must be incoming requests")
         records = deduplicate(records)
         stamp = now()
         active = self.db.execute("SELECT count(*) FROM records WHERE canceled=0").fetchone()[0]

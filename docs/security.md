@@ -24,8 +24,9 @@ needed for stolen-disk/backup protection. Backup excludes credential store/sessi
 logging in again is required on another installation. Revoking a local session does not
 revoke the website's server-side session; use the website's account controls too.
 
-Feed privacy applies before serialization. Default event mode includes title/status/dates;
-limited hosting omits guest names and personal fields. Full mode exposes selected source
+Feed privacy applies before serialization. Default event mode includes title/status/dates, venue/postal address, About text and the source page URL;
+limited hosting/stays include source page URLs but omit guest/host names and personal fields.
+Generic event mode omits URLs, descriptions and locations. Request/stay URLs identify private pages and require website login. Full mode exposes selected source
 details. Private/busy mode omits source URLs, descriptions, locations, source identifiers,
 status metadata and categories; stable random UUIDs are still present for updates. No mode
 scrapes private message bodies by design, but user-defined selectors must be reviewed to

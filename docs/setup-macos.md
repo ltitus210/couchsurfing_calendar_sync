@@ -54,9 +54,11 @@ couchsync preview
 | Error | Stop and [troubleshoot](troubleshooting.md). |
 
 **Look for:** expected titles and dates. Preview uses UTC; Calendar shows local times.
-Missing records are retained. Hosting requires positive incoming-request evidence;
-“Your Request” / “View Your Trip” is outgoing and excluded. Incoming hosting and empty-state
-wording are shared-layout assumptions awaiting live validation. [Coverage](validation.md).
+Missing records are retained. Event labels refer to Going, Interested, Organizing and Invited events.
+Hosting Request labels mean incoming guest requests; Stay labels mean your outgoing requests
+to hosts. Both use Pending / Confirmed states. Default event entries include venue/address, About text and a source link; requests/stays
+also include source links. Event detail changes refresh on subsequent successful syncs.
+Incoming/confirmed stay layouts and empty-state wording await live validation. [Coverage](validation.md).
 
 Sync/check/dry-run share the hourly guard, including failures. They are alternatives,
 not three required setup commands. Preview is local and can be repeated.
@@ -125,6 +127,10 @@ couchsync --config "$HOME/Library/Application Support/couchsync/events-first.tom
 ```
 
 Existing selector files are preserved and take precedence over bundled defaults.
+An events-only custom profile still syncs only events. To use shared defaults for hosting
+and surfing, back up that profile, remove its `selector_file` setting (and move any default
+`selectors.toml` aside), and include `hosting` in the configuration’s `categories`.
+The `hosting` category enables both incoming requests and outgoing stays.
 Only older fixed-count profiles need [the optional migration](event-first-sync.md)
 before installing an hourly worker. New installations do not need it.
 

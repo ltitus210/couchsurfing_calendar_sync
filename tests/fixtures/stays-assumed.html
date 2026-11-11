@@ -1,7 +1,10 @@
 <!doctype html><html><head><title>Synthetic Guest - Messages - Couchsurfing</title></head><body>
 <button aria-label="Profile">Profile</button><div id="app"></div><script>
 let stays=false;
-const examples={Incoming_ch:{id:'Incoming_tp_cs',banner:'Pending Stay',heading:'Stay Request',controls:'<button onclick="window.unsafe()">Accept Stay</button><button onclick="window.unsafe()">Decline</button>'},Confirmed_ch:{id:'Confirmed_tp_cs',banner:'Confirmed Stay',heading:'Your Guest',controls:''},Outgoing_ch:{id:'Outgoing_tp_cs',banner:'Pending Stay',heading:'Your Request',controls:'<button>View Your Trip</button><button onclick="window.unsafe()">Cancel Request</button>'}};
+const examples={Incoming_ch:{id:'Incoming_tp_cs',banner:'Pending Stay',heading:'Stay Request',controls:'<button onclick="window.unsafe()">Accept Stay</button><button onclick="window.unsafe()">Decline</button>'},Confirmed_ch:{id:'Confirmed_tp_cs',banner:'Confirmed Stay',heading:'Your Guest',controls:''},Outgoing_ch:{id:'Outgoing_tp_cs',banner:'Pending Stay',heading:'Your Request',controls:'<button onclick="window.unsafe()">View Your Trip</button><button onclick="window.unsafe()">Cancel Request</button>'}};
+examples.OutgoingConfirmed_ch={...examples.Outgoing_ch,id:'OutgoingConfirmed_tp_cs',banner:'Confirmed Stay'};
+examples.OutgoingAccepted_ch={...examples.Outgoing_ch,id:'OutgoingAccepted_tp_cs',banner:'Accepted Stay'};
+examples.Unknown_ch={...examples.Outgoing_ch,id:'Unknown_tp_cs',heading:'Your Stay',controls:''};
 function render(){
 const area=document.querySelector('#app');if(location.pathname==='/c/home'){area.innerHTML='<button data-messages>Messages</button>';return;}
 const chat=location.pathname.split('/')[3];const example=examples[chat];

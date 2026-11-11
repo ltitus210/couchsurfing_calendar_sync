@@ -64,7 +64,7 @@ def validate(data: dict, categories: list[str]) -> dict:
                 for s in sources
             ):
                 raise SelectorError(
-                    "Observed mode requires structured events or the guarded incoming-stay adapter"
+                    "Observed mode requires structured events or the guarded stays adapter"
                 )
         if source.get("detail_navigation") not in {None, "same_tab"}:
             raise SelectorError("Unknown detail navigation mode")

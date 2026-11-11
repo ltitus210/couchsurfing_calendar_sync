@@ -24,7 +24,7 @@ for sync, preview, serving and services; new installations use the built-in prof
 | Clicking an element picks it rather than navigating | Turn off Pick Locator to use the website normally |
 | Logged into everyday Chrome but inspection asks for login | The Playwright browser uses an isolated session; complete the normal login flow there |
 | No incoming hosting example exists | No initial inspection is required; the guarded shared layout can be used, with live hosting validation still outstanding. Do not manufacture a request |
-| Pending Stay says Your Request / View Your Trip | That is an outgoing accommodation request, excluded from incoming-hosting scope |
+| Pending Stay says Your Request / View Your Trip | That is your outgoing Stay, now synchronized for surfing; incoming guest requests are labeled Hosting Request |
 
 If live support cannot read the open window, the maintainer may need normal screen/accessibility
 permission for the support tool. Completing that permission does not configure Couchsync or

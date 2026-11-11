@@ -28,16 +28,18 @@ RSVPs, send messages or accept/decline requests to obtain examples.
 
 The versioned defaults in `couchsync.scraper.defaults` use the November 2026 English layout:
 
-- Going, Interested and Organizing tabs, scoped event cards and structured Event JSON-LD.
+- Going, Interested and Organizing tabs, scoped event cards and structured Event JSON-LD,
+  including venue/postal address and description (About). These details are re-read each run.
 - Invited, when that tab is available; otherwise a diagnostic note and preserved data.
 - Messages → Chats / Chat Requests → Stays → Pending / Confirmed. Hosting uses assumed
-  incoming panel labels/controls with positive host-direction checks. “Your Request” and
-  “View Your Trip” are excluded. Host acceptance alone remains pending.
+  panel labels/controls with positive direction checks. “Your Request” or
+  “View Your Trip” identifies an outgoing Stay; incoming guest requests are Hosting Requests. Host acceptance alone remains pending.
 - Explicit English empty-state captions; no timeout is interpreted as an empty list.
 
-Incoming hosting, invitation/empty states and other languages still need live validation.
+Incoming/confirmed stay layouts, invitation/empty states and other languages still need live validation.
 Unrecognized hosting panels are skipped with `source_notes`; event sources can still update.
 The adapter never reads private conversation bodies for calendar data or clicks request actions.
+The `hosting` source category includes both hosting requests and outgoing stays.
 All defaults use observation mode: missing records stay and full-list coverage is unverified.
 Hosting checks at most 20 observed chats per run; this is not complete inbox traversal.
 
@@ -89,7 +91,7 @@ dates. Same-tab navigation checks metadata identity after clicking a normal even
 | Policy | What may be reported | Missing entries |
 |---|---|---|
 | Inspected positive `expected_count` | Guarded bootstrap batch matching a manually inspected count; exact count changes stop it | Retained; this is not universal pagination proof |
-| `completion = "observed"` for structured events / guarded incoming stays | `complete: false`, `observations_only: true`; individual observed records can update | Retained; list completeness and absence-based changes are unverified |
+| `completion = "observed"` for structured events / guarded stays | `complete: false`, `observations_only: true`; individual observed records can update | Retained; list completeness and absence-based changes are unverified |
 | Validated generic explicit end markers | Complete under that source's inspected paging policy | Retained unless an inactive state is explicitly verified |
 
 Observation mode removes fixed positive-count restrictions but does not turn a stable

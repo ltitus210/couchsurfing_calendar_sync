@@ -166,3 +166,154 @@ def test_separate_selector_profile(tmp_path):
     path.write_text('selector_file = "event-first.selectors.toml"\ncategories = ["going"]\n')
     cfg = Config.load(path)
     assert cfg.selectors == tmp_path / "event-first.selectors.toml"
+
+
+@pytest.mark.parametrize(
+    "location,expected",
+    [
+        (
+            {"name": "Fictional Hall", "address": "100 Example St, Example City"},
+            "Fictional Hall\n100 Example St, Example City",
+        ),
+        (
+            {
+                "name": "Fictional Hall",
+                "address": {
+                    "@type": "PostalAddress",
+                    "streetAddress": "100 Example St",
+                    "addressLocality": "Example City",
+                    "addressRegion": "DC",
+                    "postalCode": "00000",
+                    "addressCountry": "US",
+                },
+            },
+            "Fictional Hall\n100 Example St\nExample City, DC 00000\nUS",
+        ),
+        (
+            {
+                "address": {
+                    "streetAddress": "100 Example St",
+                    "addressCountry": {"@type": "Country", "name": "Example Country"},
+                }
+            },
+            "100 Example St\nExample Country",
+        ),
+        (
+            {"name": "100 Example St", "address": {"streetAddress": "100 Example St"}},
+            "100 Example St",
+        ),
+        ({"name": "Online"}, "Online"),
+        ({}, ""),
+    ],
+)
+def test_event_location_includes_source_postal_address(location, expected):
+    assert event_record(json.dumps(sample(location=location)), "going").location == expected
+
+
+@pytest.mark.parametrize(
+    "address", [None, [], {"streetAddress": []}, {"addressCountry": []}, {"postalCode": 12345}]
+)
+def test_changed_address_structure_is_not_silently_discarded(address):
+    with pytest.raises(SelectorError):
+        event_record(json.dumps(sample(location={"address": address})), "going")
+
+
+@pytest.mark.parametrize(
+    "description,expected",
+    [
+        ("Meet at the entrance.\nBring a hat.", "Meet at the entrance.\nBring a hat."),
+        (
+            "<p>Meet &amp; greet</p><p>Bring <strong>snacks</strong>.<br>All welcome!</p>",
+            "Meet & greet\nBring snacks.\nAll welcome!",
+        ),
+        ("<ul><li>First</li><li>Second</li></ul>", "First\nSecond"),
+        (
+            "<p>Visible</p><script>PRIVATE SCRIPT</script><style>PRIVATE STYLE</style><iframe>HIDDEN</iframe><p>End</p>",
+            "Visible\nEnd",
+        ),
+        ("", ""),
+    ],
+)
+def test_about_is_readable_plain_calendar_text(description, expected):
+    assert (
+        event_record(json.dumps(sample(description=description)), "going").description == expected
+    )
+
+
+def test_browser_refreshes_event_address_and_about_with_stable_calendar_uid(tmp_path):
+    from icalendar import Calendar
+    from couchsync.calendar import generate
+    from couchsync.database import Database
+
+    cfg = Config(
+        tmp_path / "data", tmp_path / "config.toml", tmp_path / "logs", categories=["going"]
+    )
+    cfg.initialize()
+    cfg.selectors.write_text(tomli_w.dumps(profile()))
+    versions = [
+        sample(
+            description="<p>Original About</p>",
+            location={"name": "Original venue", "address": "100 Example St"},
+        ),
+        sample(
+            description="<p>Changed About</p>",
+            location={
+                "name": "Changed venue",
+                "address": {"streetAddress": "200 Example St", "addressLocality": "Example City"},
+            },
+        ),
+    ]
+    versions.extend([versions[1], sample(description="", location={})])
+    current = {"data": versions[0]}
+
+    class Session:
+        def load(self):
+            return {"cookies": [], "origins": []}
+
+        def save(self, state):
+            pass
+
+    async def check():
+        db = Database(cfg.data / "details.db")
+        try:
+            async with browser() as context:
+
+                async def serve_fixture(route):
+                    if "my-events" in route.request.url:
+                        body = '<button aria-label="Profile"></button><section role="tabpanel" aria-label="Going"><article data-couch-crash data-user-created><a href="/c/events/synthetic-gathering-Test123_ho">Fixture</a></article></section>'
+                    else:
+                        body = (
+                            '<button aria-label="Profile"></button><script data-testid="hangout-json-ld" type="application/ld+json">'
+                            + json.dumps(current["data"])
+                            + "</script>"
+                        )
+                    await route.fulfill(status=200, content_type="text/html", body=body)
+
+                await context.route("**/*", serve_fixture)
+
+                @asynccontextmanager
+                async def reuse(*args):
+                    yield context
+
+                uid = None
+                with patch("couchsync.scraper.browser.browser", reuse):
+                    for index, data in enumerate(versions):
+                        current["data"] = data
+                        records, metrics = await scrape(cfg, Session())
+                        with db.transaction():
+                            db.apply(records, metrics["complete"])
+                        entry = Calendar.from_ical(generate(db.rows(), cfg)).walk("VEVENT")[0]
+                        uid = uid or str(entry["uid"])
+                        assert str(entry["uid"]) == uid
+                        assert int(entry["sequence"]) == [0, 1, 1, 2][index]
+                        expected = event_record(json.dumps(data), "going")
+                        assert str(entry["location"]) == expected.location
+                        assert str(entry["description"]) == expected.description
+                        assert str(entry["url"]) == data["url"]
+                        if index == 1:
+                            assert "200 Example St" in str(entry["location"])
+                            assert str(entry["description"]) == "Changed About"
+        finally:
+            db.close()
+
+    asyncio.run(check())

@@ -41,7 +41,9 @@ def parser():
     export = commands.add_parser("export")
     export.add_argument("--output", type=Path, required=True)
     export.add_argument(
-        "--feed", choices=["all", "organized", "events", "hosting", "confirmed"], default="all"
+        "--feed",
+        choices=["all", "organized", "events", "hosting", "stays", "confirmed"],
+        default="all",
     )
     for name in ("backup", "restore"):
         cmd = commands.add_parser(name)
@@ -60,7 +62,7 @@ def parser():
             group.add_argument(
                 "--feed",
                 default="all",
-                choices=["all", "organized", "events", "hosting", "confirmed"],
+                choices=["all", "organized", "events", "hosting", "stays", "confirmed"],
             )
     return p
 
@@ -78,6 +80,9 @@ def setup_next(cfg):
     prefix = shlex.join(["couchsync", "--config", str(cfg.config)])
     if not (cfg.data / "session.enc").exists():
         print(f"Log in first: {prefix} login (Chrome: log in; Terminal: type SAVE)")
+    print(
+        "Events: Going, Interested, Organizing, Invited. Stays: Pending, Confirmed (hosting and surfing)."
+    )
     print(f"Next: {prefix} sync")
     print(f"Then: {prefix} preview")
     print(f"For the local Calendar feed: {prefix} serve")
@@ -98,7 +103,10 @@ def setup(cfg):
     event_privacy = (
         input("Event privacy full/limited/generic/busy [limited]: ").strip() or "limited"
     )
-    hosting_privacy = input("Hosting privacy full/limited/private [limited]: ").strip() or "limited"
+    hosting_privacy = (
+        input("Hosting requests / outgoing stays privacy full/limited/private [limited]: ").strip()
+        or "limited"
+    )
     interval = int(input("Sync interval in seconds, minimum 3600 [3600]: ") or "3600")
     categories = input("Categories, comma separated [" + ",".join(cfg.categories) + "]: ").strip()
     enabled = categories.split(",") if categories else cfg.categories
@@ -135,7 +143,12 @@ def status(cfg):
         undated = 0
         for row in db.rows():
             record = json.loads(row["payload"])
-            key = record["kind"] + ":" + record["status"]
+            kind = (
+                "stay"
+                if record["kind"] == "hosting" and record.get("direction") == "outgoing"
+                else record["kind"]
+            )
+            key = kind + ":" + record["status"]
             counts[key] = counts.get(key, 0) + 1
             undated += int(not record["start"] or not record["end"])
         print(

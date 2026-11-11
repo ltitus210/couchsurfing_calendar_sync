@@ -139,12 +139,26 @@ async def when_text(panel) -> str:
     return ""
 
 
-async def parse_stay(page, banner: str) -> Record | None:
+def stay_state(heading: str, banner: str, accept: bool, decline: bool, outgoing_trip: bool):
+    """Identify the account's role from dedicated request metadata, never chat text."""
+    outgoing = bool(re.search(r"\byour request\b", heading, re.I)) or outgoing_trip
+    if outgoing:
+        # Contradictory traveler/host controls require layout repair.
+        if accept or decline:
+            return None
+        if re.fullmatch(r"(Confirmed|Upcoming) Stay", banner, re.I):
+            return "outgoing", "confirmed"
+        if re.fullmatch(r"(Pending|Accepted) Stay", banner, re.I):
+            return "outgoing", "pending"
+        return None
+    status = incoming_status(heading, "", banner, accept, decline, False)
+    return ("incoming", status) if status else None
+
+
+async def parse_stay(page, banner: str) -> Record:
     await page.get_by_role("heading", level=4).first.wait_for(state="visible")
     await page.get_by_text("When", exact=True).first.wait_for(state="visible")
     panel, heading = await request_panel(page)
-    if re.search(r"\byour request\b", heading, re.I):
-        return None
     outgoing = bool(await panel.get_by_role("button", name="View Your Trip", exact=True).count())
     accept = bool(
         await panel.get_by_role("button", name=re.compile(r"^Accept (Stay|Request)$", re.I)).count()
@@ -155,9 +169,10 @@ async def parse_stay(page, banner: str) -> Record | None:
         ).count()
     )
     # Classify only dedicated metadata/control labels, never conversation text.
-    status = incoming_status(heading, "", banner, accept, decline, outgoing)
-    if status is None:
+    state = stay_state(heading, banner, accept, decline, outgoing)
+    if state is None:
         raise LayoutUnavailable()
+    direction, status = state
     https_url(page.url, couchsurfing=True)
     match = re.fullmatch(r"/c/chat/[^/]+/stays/([A-Za-z0-9_]+)", urlsplit(page.url).path)
     if not match:
@@ -165,17 +180,17 @@ async def parse_stay(page, banner: str) -> Record | None:
     start, end = stay_dates(await when_text(panel))
     title = await page.title()
     suffix = " - Messages - Couchsurfing"
-    guest = title[: -len(suffix)].strip() if title.endswith(suffix) else "Guest"
+    person = title[: -len(suffix)].strip() if title.endswith(suffix) else ""
     record = Record(
         source_id=match.group(1),
         kind="hosting",
-        title=guest or "Guest",
+        title=person or ("Host" if direction == "outgoing" else "Guest"),
         start=start,
         end=end,
         status=status,
         raw_status=banner,
         url=urlsplit(page.url)._replace(query="", fragment="").geturl(),
-        direction="incoming",
+        direction=direction,
     )
     record.validate()
     return record
@@ -207,7 +222,6 @@ async def collect_hosting(page, source, auth_marker):
 
     records = []
     unknown = 0
-    outgoing = 0
     try:
         await navigate(page, source["url"])
         await page.locator(auth_marker).wait_for(state="visible")
@@ -273,13 +287,12 @@ async def collect_hosting(page, source, auth_marker):
             except LayoutUnavailable:
                 unknown += 1
                 continue
-            if record is None:
-                outgoing += 1
-            else:
-                records.append(record)
-        note = "Assumed shared hosting layout; incoming direction checked; full-list coverage unverified"
-        if outgoing:
-            note += f"; {outgoing} outgoing requests excluded"
+            records.append(record)
+        note = (
+            "Shared stays layout; full-list coverage unverified; "
+            f"incoming hosting requests={sum(r.direction == 'incoming' for r in records)}; "
+            f"outgoing stays={sum(r.direction == 'outgoing' for r in records)}"
+        )
         if unknown:
             note += f"; {unknown} unrecognized stay panels skipped"
         if capped:
