@@ -1,12 +1,12 @@
 # macOS installation, updates and background services
 
-**First installation:** use [the guided setup](setup-macos.md), which includes the source
-versus working checkout, virtual environment, login, Chrome/Inspector handoff, first sync,
+**First installation:** use [the guided setup](setup-macos.md), which includes the installation
+commands, virtual environment, login, Chrome/Inspector handoff, first sync,
 HTTP check, Calendar subscription and background-service checkpoints. Do not use this
 reference as a shortcut around the required account-profile handoff.
 
 Requirements: Python 3.13+, macOS 15+, Intel or Apple Silicon. The primary live setup was
-checked on Intel macOS with Python 3.13.5. Keep the working checkout's `.venv` and config
+checked on Intel macOS with Python 3.13.5. Keep the project's `.venv` and config
 path stable: service definitions embed both absolute paths.
 
 ## Which command does what?
@@ -60,9 +60,7 @@ successful run. `active` or HTTP 200 alone does not prove that source data is cu
 
 ## Later code updates
 
-Bring reviewed source changes into the working checkout through Git. Stop services from
-the existing working environment before changing that environment. Reinstall from the
-working checkout using the complete `python -m pip install --no-deps --no-build-isolation
+After updating the project, stop services before changing its environment. Reinstall using the complete `python -m pip install --no-deps --no-build-isolation
 -e .` command, then start the services again so the publisher loads the new code. Follow
 [dependency update guidance](dependencies.md) when the lock/dependencies changed.
 

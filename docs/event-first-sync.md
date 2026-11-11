@@ -1,8 +1,8 @@
 # First event sync: the maintainer handoff and the user's next commands
 
 For a first installation, follow [the guided macOS setup](setup-macos.md). In particular,
-[Chrome/Inspector actions](setup-macos.md#3-inspect-the-website-in-chrome-and-playwright-inspector)
-and [the configuration handoff](setup-macos.md#4-stop-for-the-configuration-handoff) must be
+[Chrome/Inspector actions](setup-macos.md#3-inspect-in-chrome)
+and [the configuration handoff](setup-macos.md#4-get-the-account-profile) must be
 completed before the commands below. Opening Inspector does not configure synchronization.
 
 ## Before running anything here
@@ -20,20 +20,16 @@ If Inspector is still paused after the maintainer finishes, click **Resume ▶**
 That saves the session, closes its Chrome window and returns to the Terminal prompt.
 Do not type login's `SAVE` response into an inspection session.
 
-## Install the current code in the working checkout
+## Update the installation
 
-Bring source changes into this checkout using your normal Git workflow first. In the
-existing working checkout and its environment:
+After updating the project, activate its environment and reinstall:
 
 ```sh
-cd "$HOME/scripts/couchsurfing/couchsurfing_calendar_sync"
 source .venv/bin/activate
 python -m pip install --no-deps --no-build-isolation -e .
 ```
 
-Copy the full install command, including the dot after `-e`. The source checkout used for
-Codex/GitHub edits is separate from this installed checkout; installing the old working
-copy does not pick up changes sitting only in the source copy.
+Keep the final dot in `-e .`. Look for `Successfully installed couchsync`.
 
 ## Run one live sync
 
@@ -68,11 +64,11 @@ Preview does not visit Couchsurfing. Verify event counts, prefixes and dates. It
 starts in UTC: `2026-11-13T00:00:00+00:00` is November 12 at 7 PM in America/New_York.
 Check local start/end times and multi-day spans in Calendar too.
 
-**Next:** [serve and subscribe](setup-macos.md#6-serve-the-feed-and-subscribe-in-apple-calendar).
+**Next:** [serve and subscribe](setup-macos.md#6-subscribe-in-apple-calendar).
 A successful sync saves a file but does not start the HTTP server. `serve` must stay running
 in one terminal while a second terminal checks HTTP 200 and Calendar subscribes.
 
-**After the subscription displays correctly:** [upgrade and test once](setup-macos.md#7-upgrade-the-event-profile-for-changing-lists),
+**After the subscription displays correctly:** [upgrade and test once](setup-macos.md#7-upgrade-fixed-counts-if-needed),
 then [start background services](setup-macos.md#8-start-background-services). The upgrade
 backs up the old selector file, supports changing positive list sizes, and explicitly leaves
 full-list completeness unverified. Read [the limits](hourly-events.md) before unattended use.

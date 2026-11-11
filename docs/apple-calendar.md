@@ -1,12 +1,12 @@
 # Apple Calendar: verify the server, then subscribe
 
-For the complete sequence, see [guided setup, stage 6](setup-macos.md#6-serve-the-feed-and-subscribe-in-apple-calendar).
+For the complete sequence, see [guided setup, stage 6](setup-macos.md#6-subscribe-in-apple-calendar).
 The local On My Mac subscription has been exercised successfully in one user setup;
 iCloud, iPhone/iPad and remote HTTPS behavior still require their own validation.
 
 ## 1. Keep a publisher running
 
-In the working checkout's activated environment, start the saved-feed server with the
+In the project's activated environment, start the saved-feed server with the
 same configuration used for sync:
 
 ```sh

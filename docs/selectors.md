@@ -2,7 +2,7 @@
 
 ## If you are setting up your own account
 
-Use [the browser walkthrough](setup-macos.md#3-inspect-the-website-in-chrome-and-playwright-inspector)
+Use [the browser walkthrough](setup-macos.md#3-inspect-in-chrome)
 for the exact actions in each window. Opening `scraper inspect` is not an automatic setup step.
 It pauses the program so a maintainer can inspect the real website while you are logged in.
 You are not expected to invent or program selectors yourself.
@@ -31,7 +31,7 @@ explicitly limited event profile. No fabricated request is needed.
 
 **The handoff is complete only when a maintainer has supplied/checked the account's
 configuration and selector file.** Pressing Resume saves the session and closes Chrome;
-it does not create selectors. Stop at [the configuration handoff](setup-macos.md#4-stop-for-the-configuration-handoff)
+it does not create selectors. Stop at [the configuration handoff](setup-macos.md#4-get-the-account-profile)
 if those files do not exist. Synthetic test files are not settings for a real account.
 
 ## Maintainer: observations from the inspected website

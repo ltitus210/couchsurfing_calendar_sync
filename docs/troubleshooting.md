@@ -1,27 +1,23 @@
 # Troubleshooting: find the failed checkpoint
 
-If you are unsure what to do next, use the [setup stage finder](setup-macos.md#find-your-current-stage).
+If you are unsure what to do next, use the [setup stage finder](setup-macos.md#already-installed).
 Do not restart the whole installation for a later-stage error. Use the same config file
 for sync, preview, serving and services; the examples below use the supplied event-first profile.
 
-## Installation and the two checkouts
+## Installation
 
 | Symptom | Meaning / next action |
 |---|---|
-| `-e option requires 1 argument` | Use the whole command `python -m pip install --no-deps --no-build-isolation -e .`; the dot names the current working checkout |
-| Reinstall succeeds but a new command is missing | Bring source changes into the installed working checkout first; editable installs do not bridge two different directories |
-| `couchsync` not found or wrong code appears to run | Activate the working checkout's `.venv`; check `python -c 'import sys; print(sys.executable)'` |
+| `-e option requires 1 argument` | Use the whole command `python -m pip install --no-deps --no-build-isolation -e .`; the dot names the project folder |
+| Reinstall succeeds but a new command is missing | Update the project and reinstall in its active `.venv` |
+| `couchsync` not found or wrong code appears to run | Activate the project's `.venv`; check `python -c 'import sys; print(sys.executable)'` |
 | Both `(.venv)` and `(base)` appear | That alone is not an error; verify the interpreter path rather than the prompt decoration |
-
-Use `$HOME/git/couchsurfing_calendar_sync` for code edits/GitHub and
-`$HOME/scripts/couchsurfing/couchsurfing_calendar_sync` for the installed environment in
-the tested two-checkout workflow. Private application files stay outside both repositories.
 
 ## Chrome, Inspector and login
 
 | Symptom | Meaning / next action |
 |---|---|
-| Chrome and Playwright Inspector opened and nothing happens | Normal: inspection is paused. Navigate in Chrome; follow [the browser walkthrough](setup-macos.md#3-inspect-the-website-in-chrome-and-playwright-inspector) |
+| Chrome and Playwright Inspector opened and nothing happens | Normal: inspection is paused. Navigate in Chrome; follow [the browser walkthrough](setup-macos.md#3-inspect-in-chrome) |
 | Unsure where to type `SAVE` | Only at the Terminal prompt for `couchsync login`, after website authentication |
 | Need to finish `scraper inspect` | Click **Resume ▶ in Inspector**; it saves the session, closes Chrome and returns Terminal's prompt |
 | Resume closes Chrome unexpectedly | Expected behavior: it finishes inspection, not just the current website action |
@@ -38,7 +34,7 @@ change the scraper's selectors. Keep the requested Chrome page open while suppor
 
 | Symptom | Meaning / next action |
 |---|---|
-| No selectors configured / selector file missing | Opening Inspector did not create a profile. Stop at the [maintainer handoff](setup-macos.md#4-stop-for-the-configuration-handoff) |
+| No selectors configured / selector file missing | Opening Inspector did not create a profile. Stop at the [maintainer handoff](setup-macos.md#4-get-the-account-profile) |
 | `events-first.toml` does not exist | That file is an account-specific setup convention, not automatic wizard output. Ask for the exact supplied profile; do not invent settings |
 | `upgrade-events` cannot find/upgrade a profile | It migrates an existing compatible event profile; it does not discover or create the first adapter |
 | `not_due` | A sync/check/dry-run, including a failed one, happened within the configured interval. Wait normally one hour from that attempt; do not reset timestamps |

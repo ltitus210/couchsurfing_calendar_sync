@@ -1,15 +1,9 @@
 # From the first successful calendar to background event updates
 
-For the complete user sequence, use [guided setup, stages 7–9](setup-macos.md#7-upgrade-the-event-profile-for-changing-lists).
+For the complete user sequence, use [guided setup, stages 7–9](setup-macos.md#7-upgrade-fixed-counts-if-needed).
 This page explains the update policy, traffic counters and separate service controls.
 If both services already report active and the feed returns HTTP 200, do not reinstall;
-[verify the next unattended run](setup-macos.md#9-verify-the-next-unattended-run).
-
-Use `$HOME/git/couchsurfing_calendar_sync/` for source changes and GitHub pushes.
-Use `$HOME/scripts/couchsurfing/couchsurfing_calendar_sync/` as the installed working
-checkout. Do not install from the source repository if you intend to run the other checkout.
-Commit/push and transfer changes through your normal Git workflow; this guide does not
-publish a repository or overwrite either checkout automatically.
+[verify the next unattended run](setup-macos.md#9-check-the-next-hourly-run).
 
 ## What the new mode verifies
 
@@ -33,12 +27,11 @@ This means an empty tab may need further adapter inspection. Full pagination, mi
 verification, invitations and incoming hosting remain unfinished. Do not describe this as
 complete Couchsurfing synchronization. Hourly use is limited to these observation semantics.
 
-## Update the working checkout and test once
+## Update and test once
 
-After bringing the source changes into the working checkout, activate its existing `.venv`:
+After updating the project, activate its existing `.venv`:
 
 ```sh
-cd "$HOME/scripts/couchsurfing/couchsurfing_calendar_sync"
 source .venv/bin/activate
 python -m pip install --no-deps --no-build-isolation -e .
 couchsync --config "$HOME/Library/Application Support/couchsync/events-first.toml" scraper upgrade-events
@@ -100,9 +93,9 @@ curl --noproxy '*' -I http://127.0.0.1:8765/couchsurfing.ics
 ```
 
 On macOS this writes/loads a per-user `org.couchsync.serve` LaunchAgent using the working
-checkout's Python interpreter and config path. The successful HEAD response is 200, and
+project environment's Python interpreter and config path. The successful HEAD response is 200, and
 the existing On My Mac Apple Calendar subscription stays the same. No new scrape is
-triggered by serving or checking the feed. Keep the working checkout/venv at a stable path.
+triggered by serving or checking the feed. Keep the project and `.venv` at stable paths.
 
 ## Hourly observation worker
 
